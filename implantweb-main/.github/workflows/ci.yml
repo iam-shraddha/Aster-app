@@ -1,0 +1,42 @@
+name: CI for ImplantWeb
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      # Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # #Run tests
+      #- name: Run tests
+       # run: npm test
+
+      # Build the project
+      - name: Build project
+        run: DISABLE_ESLINT_PLUGIN=true npm run build
+        #run: npm run build
+
+      # Deploy (Optional, add if you have a deployment process)
+      # - name: Deploy to Server
+      #   run: |
+      #     echo "Deploying to server..."
+

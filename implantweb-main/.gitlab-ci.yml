@@ -1,0 +1,36 @@
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  NODE_ENV: production
+
+cache:
+  paths:
+    - node_modules/
+
+build-job:
+  stage: build
+  image: node:18
+  script:
+    - npm install
+    - npm run build
+  artifacts:
+    paths:
+      - build/
+
+test-job:
+  stage: test
+  image: node:18
+  script:
+    - npm install
+    - npm test
+
+deploy-job:
+  stage: deploy
+  script:
+    - echo "Deploying ImplantWeb app..."
+    # Add deployment steps here
+  dependencies:
+    - build-job
