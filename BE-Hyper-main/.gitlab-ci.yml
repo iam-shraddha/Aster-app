@@ -1,0 +1,18 @@
+image: ubuntu:latest
+
+stages:
+  - build
+
+before_script:
+  - apt-get update -qq
+  - apt-get install -y openjdk-17-jdk
+  - chmod +x ./gradlew
+
+build:
+  stage: build
+  script:
+    - ./gradlew build
+    - ./gradlew bootJar
+  artifacts:
+    paths:
+      - build/libs/*.jar

@@ -1,0 +1,65 @@
+name: Implant Service ECS Deployment
+ 
+on:
+  push:
+    branches:
+      - main
+ 
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+ 
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+ 
+      - name: 🔑 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: "ap-south-1"
+ 
+      - name: 🔓 Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+ 
+      - name: 🏗️ Build, tag, and push Docker image to Amazon ECR
+        id: build-image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          ECR_REPO="490004626092.dkr.ecr.ap-south-1.amazonaws.com/implantweb-prod-backend-service"
+          docker build -t $ECR_REPO:$IMAGE_TAG .
+          docker push $ECR_REPO:$IMAGE_TAG
+          echo "image=$ECR_REPO:$IMAGE_TAG" >> $GITHUB_OUTPUT
+ 
+      - name: 📄 Get deployed task definition
+        run: |
+          aws ecs describe-task-definition --task-definition implantweb-prod-backend-task --region ap-south-1 --query "taskDefinition" --output json > task-definition.json || { echo "Failed to fetch task definition"; exit 1; }
+ 
+      - name: 🛠️ Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: implantweb-prod-backend-service
+          image: ${{ steps.build-image.outputs.image }}
+ 
+      - name: 🔍 Inspect Task Definition
+        run: cat ${{ steps.task-def.outputs.task-definition }}
+
+      - name: 📝 Check Variables for Prod
+        if: github.ref_name == 'main'
+        run: |
+          echo "IMPLANT_ECS_CLUSTER_PROD=implantweb-prod-ecs"
+          echo "ECS_SERVICE_PROD=implantweb-prod-backend-service"
+ 
+      - name: 🚀 Deploy to Amazon ECS service (Prod)
+        if: github.ref_name == 'main'
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: "implantweb-prod-backend-service"
+          cluster: "implantweb-prod-ecs"
+          wait-for-service-stability: true
