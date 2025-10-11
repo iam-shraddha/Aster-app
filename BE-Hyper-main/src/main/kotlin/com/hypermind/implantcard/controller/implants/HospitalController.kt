@@ -46,4 +46,23 @@ class HospitalController(private val hospitalService: HospitalService) {
         val hospitals = hospitalService.getAllHospitals()
         return ResponseEntity.ok(hospitals)
     }
+
+    // Test endpoint to create/update hospital with S3 URLs for premium testing
+    // Generic hospital data for testing - not specific to any hospital
+    @PostMapping("/setupTestHospitalWithS3")
+    fun setupTestHospitalWithS3(): ResponseEntity<Any> {
+        val hospitalDTO = HospitalDTO().apply {
+            hospitalName = "GENERAL HOSPITAL"  // Generic name
+            contactNumber = "1234567890"  // Generic contact
+            websiteAddress = "www.hospital.com"
+            emailId = "info@hospital.com"
+            // S3 URLs for premium assets - these will be fetched from S3
+            logoHd = "https://hospital-info-s3-mumbai-apse.s3.ap-south-1.amazonaws.com/astar-aadhar-hospital/aster_logo_hd.jpg"
+            logoFt = "https://hospital-info-s3-mumbai-apse.s3.ap-south-1.amazonaws.com/astar-aadhar-hospital/aster_aadhar_logo_ft1+(1).png"
+            signature = "https://hospital-info-s3-mumbai-apse.s3.ap-south-1.amazonaws.com/H2/H2-+Sig.jpg"
+        }
+        
+        val newHospital = hospitalService.addNewHospital(hospitalDTO)
+        return ResponseEntity.ok(newHospital)
+    }
 }
