@@ -13,8 +13,8 @@ class WebConfig : WebMvcConfigurer {
                 "http://localhost:8080",
                 "https://implantweb.vercel.app", //Production frontend,
                 "https://implant.hyperminds.tech",
-                "http://13.234.19.42:3000",
-                "http://13.234.19.42:8080"
+                "http://52.66.203.74:3000",
+                "http://52.66.203.74:8080"
             )
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Allowed HTTP methods
             .allowedHeaders("*") // Allow all headers
