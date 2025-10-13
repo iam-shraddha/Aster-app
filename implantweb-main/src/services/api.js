@@ -149,17 +149,20 @@ export const submitPatientImplantInfo = async (patientDetails) => {
 
 
 // Fetch patient implant PDF
-export const fetchPdf = async (registrationNumber, hospitalId) => {
+export const fetchPdf = async (registrationNumber, hospitalId, doctorId = null) => {
   try {
     if (!registrationNumber || !hospitalId) {
       throw new Error('Invalid parameters: patientId and hospitalId are required.');
     }
-    const response = await axios.get(
-      `${BASE_URL}/patientImplantInfo/generatePdf/${registrationNumber}/${hospitalId}`,
-      {
-        responseType: 'blob', // To handle the PDF file response
-      }
-    );
+    
+    let url = `${BASE_URL}/patientImplantInfo/generatePdf/${registrationNumber}/${hospitalId}`;
+    if (doctorId) {
+      url += `?doctorId=${doctorId}`;
+    }
+    
+    const response = await axios.get(url, {
+      responseType: 'blob', // To handle the PDF file response
+    });
 
     return URL.createObjectURL(new Blob([response.data]));
   } catch (error) {
@@ -172,14 +175,17 @@ export const fetchPdf = async (registrationNumber, hospitalId) => {
 
 
 //fetch patient implant PDF
-export const fetchPatientPdf = async (registrationNumber, hospitalId) => {
+export const fetchPatientPdf = async (registrationNumber, hospitalId, doctorId = null) => {
   if (!registrationNumber || !hospitalId) {
     console.error("Missing credentials: patientId or hospitalId is undefined.");
     console.log("Provided values:", { registrationNumber, hospitalId });
     throw new Error('Invalid parameters: Both patientId and hospitalId are required.');
   }
   try {
-    const pdfUrl = `${BASE_URL}/patientImplantInfo/generatePdf/${registrationNumber}/${hospitalId}`;
+    let pdfUrl = `${BASE_URL}/patientImplantInfo/generatePdf/${registrationNumber}/${hospitalId}`;
+    if (doctorId) {
+      pdfUrl += `?doctorId=${doctorId}`;
+    }
 
     const response = await fetch(pdfUrl, {
       method: 'GET',
@@ -197,14 +203,17 @@ export const fetchPatientPdf = async (registrationNumber, hospitalId) => {
 };
 
 //fetch patient implant PDF
-export const fetchImplantPdfforPreview = async (registrationNumber, hospitalId) => {
+export const fetchImplantPdfforPreview = async (registrationNumber, hospitalId, doctorId = null) => {
   if (!registrationNumber || !hospitalId) {
     console.error("Missing credentials: patientId or hospitalId is undefined.");
     console.log("Provided values:", { registrationNumber, hospitalId });
     throw new Error('Invalid parameters: Both patientId and hospitalId are required.');
   }
   try {
-    const pdfUrl = `${BASE_URL}/patientImplantInfo/generateCombinedCardsPdf/${registrationNumber}/${hospitalId}`;
+    let pdfUrl = `${BASE_URL}/patientImplantInfo/generateCombinedCardsPdf/${registrationNumber}/${hospitalId}`;
+    if (doctorId) {
+      pdfUrl += `?doctorId=${doctorId}`;
+    }
 
     const response = await fetch(pdfUrl, {
       method: 'GET',
@@ -280,19 +289,41 @@ export const fetchAllImplantsforid = async () => {
 };
 
 
+// Function to fetch doctors by hospital
+export const fetchDoctorsByHospital = async (hospitalId) => {
+  try {
+    if (!hospitalId) {
+      throw new Error('Invalid parameters: hospitalId is required.');
+    }
+
+    const response = await axios.get(
+      `${BASE_URL}/doctors/byHospital/${hospitalId}`
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching doctors:", error.response?.data || error.message);
+    throw new Error(
+      error.response?.data?.message || "Failed to fetch doctors. Please try again."
+    );
+  }
+};
+
 // Function to fetch the first image
-export const fetchImage1 = async (registrationNumber, hospitalId) => {
+export const fetchImage1 = async (registrationNumber, hospitalId, doctorId = null) => {
   try {
     if (!registrationNumber || !hospitalId) {
       throw new Error('Invalid parameters: registrationNumber and hospitalId are required.');
     }
 
-    const response = await axios.get(
-      `${BASE_URL}/patientImplantInfo/generateImage1/${registrationNumber}/${hospitalId}`,
-      {
-        responseType: 'blob', // Handle the image file response
-      }
-    );
+    let url = `${BASE_URL}/patientImplantInfo/generateImage1/${registrationNumber}/${hospitalId}`;
+    if (doctorId) {
+      url += `?doctorId=${doctorId}`;
+    }
+
+    const response = await axios.get(url, {
+      responseType: 'blob', // Handle the image file response
+    });
 
     return URL.createObjectURL(new Blob([response.data])); // Create a URL for the image
   } catch (error) {
@@ -304,18 +335,20 @@ export const fetchImage1 = async (registrationNumber, hospitalId) => {
 };
 
 // Function to fetch the second image
-export const fetchImage2 = async (registrationNumber, hospitalId) => {
+export const fetchImage2 = async (registrationNumber, hospitalId, doctorId = null) => {
   try {
     if (!registrationNumber || !hospitalId) {
       throw new Error('Invalid parameters: registrationNumber and hospitalId are required.');
     }
 
-    const response = await axios.get(
-      `${BASE_URL}/patientImplantInfo/generateImage2/${registrationNumber}/${hospitalId}`,
-      {
-        responseType: 'blob', // Handle the image file response
-      }
-    );
+    let url = `${BASE_URL}/patientImplantInfo/generateImage2/${registrationNumber}/${hospitalId}`;
+    if (doctorId) {
+      url += `?doctorId=${doctorId}`;
+    }
+
+    const response = await axios.get(url, {
+      responseType: 'blob', // Handle the image file response
+    });
 
     return URL.createObjectURL(new Blob([response.data])); // Create a URL for the image
   } catch (error) {
