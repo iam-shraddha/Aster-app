@@ -780,8 +780,10 @@
 //}
 package com.hypermind.implantcard.service.implants
 
+import com.hypermind.implantcard.model.implants.Doctor
 import com.hypermind.implantcard.model.implants.Hospital
 import com.hypermind.implantcard.model.implants.PatientWithTheirImplants
+import com.hypermind.implantcard.service.implants.DoctorService
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import java.awt.*
@@ -797,7 +799,7 @@ import javax.imageio.ImageIO
 import kotlin.math.roundToInt
 
 @Service
-class PdfService {
+class PdfService(private val doctorService: DoctorService) {
 
     companion object {
         private const val CARD_WIDTH = 600
@@ -840,6 +842,51 @@ class PdfService {
         return listOf(frontImage, backImage)
     }
 
+    // New methods with doctor support
+    fun generatePdf(patientWithImplants: PatientWithTheirImplants, hospital: Hospital, doctorId: Int? = null): ByteArray {
+        val doctor = doctorId?.let { doctorService.getDoctorById(it) }
+        return generatePdfWithDoctor(patientWithImplants, hospital, doctor)
+    }
+
+    fun generateImage(patientWithImplants: PatientWithTheirImplants, hospital: Hospital, doctorId: Int? = null): List<ByteArray> {
+        val doctor = doctorId?.let { doctorService.getDoctorById(it) }
+        return generateImageWithDoctor(patientWithImplants, hospital, doctor)
+    }
+
+    private fun generatePdfWithDoctor(patientWithImplants: PatientWithTheirImplants, hospital: Hospital, doctor: Doctor?): ByteArray {
+        val totalHeight = CARD_HEIGHT * 2 + PADDING
+        val image = BufferedImage(CARD_WIDTH, totalHeight, BufferedImage.TYPE_INT_RGB)
+        val graphics = image.createGraphics()
+
+        try {
+            // Enable anti-aliasing
+            graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+
+        // Set background
+        graphics.color = Color.decode("#F8F9FA")
+        graphics.fillRect(0, 0, CARD_WIDTH, totalHeight)
+
+            // Draw the front and back cards
+            drawFrontCard(graphics, hospital, patientWithImplants)
+            drawBackCardWithDoctor(graphics, hospital, patientWithImplants, doctor)
+
+            // Write the final image as JPEG
+            val outputStream = ByteArrayOutputStream()
+            ImageIO.write(image, "jpeg", outputStream)
+            return outputStream.toByteArray()
+        } finally {
+            graphics.dispose()
+        }
+    }
+
+    private fun generateImageWithDoctor(patientWithImplants: PatientWithTheirImplants, hospital: Hospital, doctor: Doctor?): List<ByteArray> {
+        val frontImage = generateFrontImage(patientWithImplants, hospital)
+        val backImage = generateBackImageWithDoctor(patientWithImplants, hospital, doctor)
+
+        return listOf(frontImage, backImage)
+    }
+
     private fun generateFrontImage(patientWithImplants: PatientWithTheirImplants, hospital: Hospital): ByteArray {
         val image = BufferedImage(CARD_WIDTH, CARD_HEIGHT, BufferedImage.TYPE_INT_RGB)
         val graphics = image.createGraphics()
@@ -864,6 +911,18 @@ class PdfService {
         }
     }
 
+    private fun generateBackImageWithDoctor(patientWithImplants: PatientWithTheirImplants, hospital: Hospital, doctor: Doctor?): ByteArray {
+        val image = BufferedImage(CARD_WIDTH, CARD_HEIGHT, BufferedImage.TYPE_INT_RGB)
+        val graphics = image.createGraphics()
+        try {
+            initializeGraphics(graphics)
+            drawBackCardforsaparateWithDoctor(graphics, hospital, patientWithImplants, doctor)
+            return writeImageToByteArray(image)
+        } finally {
+            graphics.dispose()
+        }
+    }
+
     private fun initializeGraphics(graphics: Graphics2D) {
         graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
@@ -879,7 +938,7 @@ class PdfService {
 
 
 
-    private fun drawFrontCard(graphics: Graphics2D, hospital: Hospital, patientWithImplants: PatientWithTheirImplants) {
+    private fun drawFrontCard(graphics: Graphics2D, hospital: Hospital, @Suppress("UNUSED_PARAMETER") patientWithImplants: PatientWithTheirImplants) {
         drawCardBackground(graphics, 0)
         drawHeaderSection(graphics, hospital, 0)
         drawWarningSection(graphics)
@@ -893,6 +952,25 @@ class PdfService {
         drawSignature(graphics, 0, hospital)
         drawImagePlaceholders(graphics, 0, hospital)
         drawFooter2(graphics, hospital, 0)
+    }
+
+    private fun drawBackCardforsaparateWithDoctor(graphics: Graphics2D, hospital: Hospital, patientWithImplants: PatientWithTheirImplants, doctor: Doctor?) {
+        drawCardBackground(graphics, 0)
+        drawHeaderSection(graphics, hospital, 0)
+        drawPatientInformation(graphics, patientWithImplants, 0)
+        drawSignatureWithDoctor(graphics, 0, hospital, doctor)
+        drawImagePlaceholders(graphics, 0, hospital)
+        drawFooter2(graphics, hospital, 0)
+    }
+
+    private fun drawBackCardWithDoctor(graphics: Graphics2D, hospital: Hospital, patientWithImplants: PatientWithTheirImplants, doctor: Doctor?) {
+        val yOffset = CARD_HEIGHT + PADDING
+        drawCardBackground(graphics, yOffset)
+        drawHeaderSection(graphics, hospital, yOffset)
+        drawPatientInformation(graphics, patientWithImplants, yOffset)
+        drawSignatureWithDoctor(graphics, yOffset, hospital, doctor)
+        drawImagePlaceholders(graphics, yOffset, hospital)
+        drawFooter2(graphics, hospital, yOffset)
     }
     private fun drawBackCard(graphics: Graphics2D, hospital: Hospital, patientWithImplants: PatientWithTheirImplants) {
         val yOffset = CARD_HEIGHT + PADDING
@@ -1159,6 +1237,64 @@ class PdfService {
         graphics.color = Color.BLACK
         graphics.font = Font("Arial", Font.PLAIN, 12)
         graphics.drawString("Auth. Sign", CARD_WIDTH - 100, signatureY + PADDING - 10) // Shift text upward
+    }
+
+    private fun drawSignatureWithDoctor(graphics: Graphics2D, yOffset: Int, hospital: Hospital, doctor: Doctor?) {
+        val signatureY = yOffset + CARD_HEIGHT - PADDING * 7 // Adjusted to shift upward
+
+        // Determine which signature to use: doctor signature if available, otherwise hospital signature
+        val signatureUrl = doctor?.signatureUrl ?: hospital.signature
+        var authImage: BufferedImage
+        
+        try {
+            authImage = signatureUrl?.let { fetchImage(it) } ?: createPlaceholderImage()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            authImage = createPlaceholderImage()
+        }
+
+        // Define padding and adjusted dimensions for the image
+        val paddingLeft = 30 // Add left padding
+        val imageWidth = 60  // Reduced image width
+        val imageHeight = 30 // Reduced image height
+
+        // Calculate the position for the image (aligned closely to the signature line)
+        val imageX = CARD_WIDTH - 150 + paddingLeft // Adjusted X position with padding
+        val imageY = signatureY - imageHeight // Image directly above the signature line
+
+        // Draw the image with adjusted dimensions
+        graphics.drawImage(authImage, imageX, imageY, imageWidth, imageHeight, null)
+
+        // Signature line (closer to the image)
+        graphics.color = Color.LIGHT_GRAY
+        graphics.drawLine(
+            CARD_WIDTH - 150,
+            signatureY - 5, // Shift upward closer to the image
+            CARD_WIDTH - PADDING * 2,
+            signatureY - 5
+        )
+
+        // Auth. Sign text (aligned closely to the line)
+        graphics.color = Color.BLACK
+        graphics.font = Font("Arial", Font.PLAIN, 12)
+        
+        // Display doctor name if doctor is provided, otherwise show "Auth. Sign"
+        val signatureText = if (doctor != null) {
+            doctor.doctorName ?: "Auth. Sign"
+        } else {
+            "Auth. Sign"
+        }
+        
+        graphics.drawString(signatureText, CARD_WIDTH - 100, signatureY + PADDING - 10) // Shift text upward
+    }
+
+    private fun createPlaceholderImage(): BufferedImage {
+        val placeholder = BufferedImage(100, 50, BufferedImage.TYPE_INT_ARGB)
+        val g2d = placeholder.createGraphics()
+        g2d.color = Color.GRAY
+        g2d.fillRect(0, 0, 100, 50) // Drawing a placeholder box
+        g2d.dispose()
+        return placeholder
     }
 
 
