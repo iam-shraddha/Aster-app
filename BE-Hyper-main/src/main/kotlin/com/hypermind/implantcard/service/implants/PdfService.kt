@@ -816,9 +816,9 @@ class PdfService {
             graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
 
-            // Set background
-            graphics.color = Color.decode("#F3F4F6")
-            graphics.fillRect(0, 0, CARD_WIDTH, totalHeight)
+        // Set background
+        graphics.color = Color.decode("#F8F9FA")
+        graphics.fillRect(0, 0, CARD_WIDTH, totalHeight)
 
             // Draw the front and back cards
             drawFrontCard(graphics, hospital, patientWithImplants)
@@ -867,7 +867,7 @@ class PdfService {
     private fun initializeGraphics(graphics: Graphics2D) {
         graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-        graphics.color = Color.decode("#F3F4F6")
+        graphics.color = Color.decode("#F8F9FA")
         graphics.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT)
     }
 
@@ -881,15 +881,14 @@ class PdfService {
 
     private fun drawFrontCard(graphics: Graphics2D, hospital: Hospital, patientWithImplants: PatientWithTheirImplants) {
         drawCardBackground(graphics, 0)
-        drawLogos(graphics, hospital, 0)
+        drawHeaderSection(graphics, hospital, 0)
         drawWarningSection(graphics)
-        drawIdCardSection(graphics)
         drawFooter(graphics, hospital, 0)
     }
 
     private fun drawBackCardforsaparate(graphics: Graphics2D, hospital: Hospital, patientWithImplants: PatientWithTheirImplants) {
         drawCardBackground(graphics, 0)
-        drawLogos(graphics, hospital, 0)
+        drawHeaderSection(graphics, hospital, 0)
         drawPatientInformation(graphics, patientWithImplants, 0)
         drawSignature(graphics, 0, hospital)
         drawImagePlaceholders(graphics, 0, hospital)
@@ -898,7 +897,7 @@ class PdfService {
     private fun drawBackCard(graphics: Graphics2D, hospital: Hospital, patientWithImplants: PatientWithTheirImplants) {
         val yOffset = CARD_HEIGHT + PADDING
         drawCardBackground(graphics, yOffset)
-        drawLogos(graphics, hospital, yOffset)
+        drawHeaderSection(graphics, hospital, yOffset)
         drawPatientInformation(graphics, patientWithImplants, yOffset)
         drawSignature(graphics, yOffset, hospital)
         drawImagePlaceholders(graphics, yOffset, hospital)
@@ -916,91 +915,137 @@ class PdfService {
         )
     }
 
-    private fun drawLogos(graphics: Graphics2D, hospital: Hospital, yOffset: Int) {
-        // Right logo only (left logo removed as per feedback 2)
-        val rightLogoPath = hospital.logoHd // Path or URL of the right logo
 
-        val margin = 5
+    private fun drawHospitalLogo(graphics: Graphics2D, hospital: Hospital, yOffset: Int) {
+        val logoPath = hospital.logoHd
         try {
-            // Load the right logo (URL or file) - Left logo removed as per feedback 2
-            val rightLogo: BufferedImage = if (rightLogoPath?.startsWith("http") == true) {
-                ImageIO.read(URL(rightLogoPath)) // If URL
+            val logo: BufferedImage = if (logoPath?.startsWith("http") == true) {
+                ImageIO.read(URL(logoPath))
             } else {
-                ImageIO.read(File(rightLogoPath)) // If file path
+                ImageIO.read(File(logoPath))
+            }
+            
+            // Position logo on the right side
+            val logoSize = 50
+            val logoX = CARD_WIDTH - logoSize - PADDING * 2
+            val logoY = yOffset
+            graphics.drawImage(logo, logoX, logoY, logoSize, logoSize, null)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun drawHeaderSection(graphics: Graphics2D, hospital: Hospital, yOffset: Int) {
+        // Draw header background - match card background for seamless look
+        graphics.color = Color.decode("#F8F9FA")
+        graphics.fillRect(
+            PADDING + 1,  // Start 1px inside the border
+            yOffset + PADDING + 1,  // Start 1px inside the border
+            CARD_WIDTH - 2 * PADDING - 2,  // Width minus 2px for borders
+            PADDING * 3 - 2  // Height minus 2px for borders
+        )
+        
+        // No border - seamless integration with card background
+        
+        // Draw logo on the left
+        drawLogo(graphics, hospital, yOffset)
+        
+        // Draw title image on the right
+        drawTitleImage(graphics, yOffset)
+    }
+    
+    private fun drawLogo(graphics: Graphics2D, hospital: Hospital, yOffset: Int) {
+        val rightLogoPath = hospital.logoHd
+
+        try {
+            val rightLogo: BufferedImage = if (rightLogoPath?.startsWith("http") == true) {
+                ImageIO.read(URL(rightLogoPath))
+            } else {
+                ImageIO.read(File(rightLogoPath))
             }
 
-            val rightLogoX = CARD_WIDTH - PADDING - 70 - margin
-            val rightLogoY = yOffset + PADDING + margin
-            graphics.drawImage(rightLogo, rightLogoX, rightLogoY, 70, 70, null)
+            val aspectRatio = rightLogo.width.toFloat() / rightLogo.height.toFloat()
+            val logoSize = 50
+            val logoWidth = logoSize
+            val logoHeight = (logoSize / aspectRatio).toInt()
+            
+            val logoX = PADDING * 2
+            val logoY = yOffset + PADDING + (PADDING * 3 - logoHeight) / 2
+            
+            graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+            graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
+            
+            graphics.drawImage(rightLogo, logoX, logoY, logoWidth, logoHeight, null)
 
         } catch (e: Exception) {
             e.printStackTrace()
-            // Fallback: Draw text if logos can't be loaded
             graphics.color = Color.decode("#0D9488")
+            graphics.font = Font("Arial", Font.BOLD, 12)
+            graphics.drawString("MEDICAL CLINIC", PADDING * 2, yOffset + PADDING * 2)
+        }
+    }
+    
+    private fun drawTitleImage(graphics: Graphics2D, yOffset: Int) {
+        try {
+            val resourceStream = this::class.java.classLoader.getResourceAsStream("img/patient_implant.jpg")
+            val titleImage = resourceStream?.let { ImageIO.read(it) }
+            
+            if (titleImage != null) {
+                val aspectRatio = titleImage.width.toFloat() / titleImage.height.toFloat()
+                val titleHeight = PADDING * 2
+                val titleWidth = (titleHeight * aspectRatio).toInt()
+                
+                val titleX = CARD_WIDTH - titleWidth - PADDING * 2
+                val titleY = yOffset + PADDING + (PADDING * 3 - titleHeight) / 2
+                
+                graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+                graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
+                
+                graphics.drawImage(titleImage, titleX, titleY, titleWidth, titleHeight, null)
+            } else {
+                // Fallback text
+                graphics.color = Color.BLACK
+                graphics.font = Font("Arial", Font.BOLD, 14)
+                graphics.drawString("PATIENT IMPLANT ID CARD", CARD_WIDTH - 200, yOffset + PADDING * 2)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Fallback text
+            graphics.color = Color.BLACK
             graphics.font = Font("Arial", Font.BOLD, 14)
-            graphics.drawString("MEDICAL CLINIC", PADDING * 2 + margin, yOffset + PADDING * 2)
-            graphics.drawString("HEALTHCARE", CARD_WIDTH - 150 - margin, yOffset + PADDING * 2)
+            graphics.drawString("PATIENT IMPLANT ID CARD", CARD_WIDTH - 200, yOffset + PADDING * 2)
         }
     }
 
 
     private fun drawWarningSection(graphics: Graphics2D) {
-        // Warning box with increased height
+        // Full width warning section with better positioning
         graphics.color = Color.decode("#0D9488")
-        val warningWidth = (CARD_WIDTH - 3 * PADDING) * 0.75
-        val warningHeight = 120 // Increased height for the warning box
-        graphics.fillRect(
-            PADDING + 3,
-            PADDING * 4, // Adjusted Y position to shift upwards
-            warningWidth.roundToInt(),
-            warningHeight
-        )
-
-        // Warning text with shifted vertical position
-        graphics.color = Color.WHITE
-        graphics.font = Font("Arial", Font.BOLD, 18)
-        drawWrappedText(
-            graphics,
-            "The person has a metal implant in their body, which could potentially trigger a metal detection device",
-            PADDING * 3,
-            PADDING * 5, // Adjusted Y position to align with the warning box
-            warningWidth.roundToInt() - PADDING * 2
-        )
-    }
-
-    private fun drawIdCardSection(graphics: Graphics2D) {
-        // Draw rounded rectangle with increased height
-        graphics.color = Color.LIGHT_GRAY
-        val idCardHeight = 120 // Increased height for the ID card section
+        val warningWidth = CARD_WIDTH - 2 * PADDING
+        val warningHeight = 80
+        val warningY = PADDING * 5 // Position below header
+        
         graphics.fillRoundRect(
-            CARD_WIDTH - 150 - PADDING,
-            PADDING * 4, // Adjusted Y position to shift upwards
-            130,
-            idCardHeight,
+            PADDING,
+            warningY,
+            warningWidth,
+            warningHeight,
             CORNER_RADIUS,
             CORNER_RADIUS
         )
 
-        try {
-            // Define the path to the static image
-            val imagePath = "img/patient_implant.jpg" // Relative path in the resources folder
-
-            // Load the image (from classpath)
-            val resource = this::class.java.classLoader.getResource(imagePath)
-            if (resource != null) {
-                val staticImage: BufferedImage = ImageIO.read(resource)
-                // Draw the static image in the same position
-                graphics.drawImage(staticImage, CARD_WIDTH - 150 - PADDING, PADDING * 4, 130, idCardHeight, null)
-            } else {
-                throw FileNotFoundException("Image file not found in classpath: $imagePath")
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            // Optionally, handle error if the image cannot be loaded
-            graphics.color = Color.RED
-            graphics.drawString("Image loading failed: ${e.message}", PADDING * 2, PADDING * 5)
-        }
+        // Warning text
+        graphics.color = Color.WHITE
+        graphics.font = Font("Arial", Font.BOLD, 15)
+        drawWrappedText(
+            graphics,
+            "The person has a metal implant in their body, which could potentially trigger a metal detection device",
+            PADDING * 2,
+            warningY + PADDING,
+            warningWidth - PADDING * 2
+        )
     }
+
 
 
 
@@ -1129,26 +1174,10 @@ class PdfService {
         val placeholderHeight = 60
         val spaceWidth = (CARD_WIDTH - 2 * PADDING - 2 * placeholderWidth) / 3 // Calculate spaces between placeholders
 
-        // Draw static image placeholder
-        val staticImageX = PADDING + spaceWidth
-        val staticImagePath = "img/patient_implant.jpg"
-        try {
-            val resourceStream = this::class.java.classLoader.getResourceAsStream(staticImagePath)
-            val staticImage = resourceStream?.let { ImageIO.read(it) }
-            if (staticImage != null) {
-                graphics.drawImage(staticImage, staticImageX, rowY + 10, placeholderWidth, placeholderHeight, null)
-            } else {
-                graphics.color = Color.RED
-                graphics.drawString("Image not found", staticImageX + 10, rowY + 40)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            graphics.color = Color.RED
-            graphics.drawString("Error loading image: ${e.message}", staticImageX + 10, rowY + 40)
-        }
+        // Static image placeholder removed (redundant "PATIENT IMPLANT ID CARD" icon)
 
         // Draw dynamic image placeholder
-        val dynamicImageX = staticImageX + placeholderWidth + spaceWidth
+        val dynamicImageX = PADDING + spaceWidth
         try {
             val dynamicImageUrl = hospital.logoFt
             val dynamicImage = dynamicImageUrl?.let { fetchImage(it) }
@@ -1167,34 +1196,31 @@ class PdfService {
 
 
     private fun drawFooter(graphics: Graphics2D, hospital: Hospital, yOffset: Int) {
-        // Adjust the footer height and add margin to the bottom
-        val footerHeight = PADDING * 8 // Increased height to accommodate additional contact info
+        // Simple footer design
+        val footerHeight = PADDING * 6
         val footerY = yOffset + CARD_HEIGHT - footerHeight
-        val marginBottom = PADDING // Add margin at the bottom to prevent overlap
+        val marginBottom = PADDING
 
-        // Set background color to gray for the left half
-        graphics.color = Color.decode("#D3D3D3") // Light gray color
+        // Simple footer background
+        graphics.color = Color.WHITE
         graphics.fillRect(
             PADDING + 3,
             footerY,
-            CARD_WIDTH / 2, // Left half
+            CARD_WIDTH / 2,
             footerHeight - marginBottom
         )
 
-        // Text color set to dark blue
-        graphics.color = Color.decode("#00008B") // Dark blue color
-        graphics.font = Font("Arial", Font.BOLD, 16)
+        // Simple text
+        graphics.color = Color.decode("#00008B")
+        graphics.font = Font("Arial", Font.BOLD, 12)
 
-        // Left section - Mobile number and website link (in the left half)
         val leftTextY = footerY + PADDING
         graphics.drawString(hospital.contactNumber ?: "NA", PADDING * 3, leftTextY)
         graphics.drawString(hospital.websiteAddress ?: "NA", PADDING * 3, leftTextY + PADDING)
         
-        // Add additional contact information as per feedback 2
-        graphics.drawString("Toll Free No: 1800 123 0355", PADDING * 3, leftTextY + PADDING * 2)
-        graphics.drawString("Emergency No: +91 9158909090", PADDING * 3, leftTextY + PADDING * 3)
-        graphics.drawString("T +91 231 662 2555", PADDING * 3, leftTextY + PADDING * 4)
-        graphics.drawString("Website: www.asteraadhar.com", PADDING * 3, leftTextY + PADDING * 5)
+        // Simple contact info
+        graphics.drawString("Toll Free: 1800-123-4567", PADDING * 3, leftTextY + PADDING * 2)
+        graphics.drawString("Emergency: 911", PADDING * 3, leftTextY + PADDING * 3)
 
         // Right section - Dynamic image from hospital (right half)
         val imageUrl = hospital.logoFt
@@ -1313,4 +1339,3 @@ class PdfService {
         return ImageIO.read(ByteArrayInputStream(imageBytes))
     }
 }
-
