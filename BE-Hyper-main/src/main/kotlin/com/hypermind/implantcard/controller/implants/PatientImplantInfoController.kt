@@ -83,7 +83,8 @@ class PatientImplantInfoController(private val patientImplantInfoService: Patien
     @GetMapping("/generatePdf/{patientId}/{hospitalId}")
     fun generateCombinedPdf(
         @PathVariable("patientId") patientId: String,
-        @PathVariable("hospitalId") hospitalId: Int
+        @PathVariable("hospitalId") hospitalId: Int,
+        @RequestParam(value = "doctorId", required = false) doctorId: Int?
     ): ResponseEntity<Any> {
         try {
             // Fetch patient details and implant info
@@ -100,8 +101,8 @@ class PatientImplantInfoController(private val patientImplantInfoService: Patien
             val hospital = hospitalService.getHospital(hospitalId)
                 ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Hospital not found for ID: $hospitalId")
 
-            // Generate JPEG (previously PDF)
-            val jpegBytes = pdfService.generatePdf(patientWithTheirImplants, hospital)
+            // Generate JPEG (previously PDF) with optional doctor signature
+            val jpegBytes = pdfService.generatePdf(patientWithTheirImplants, hospital, doctorId)
 
             // Set appropriate headers for JPEG download
             val headers = HttpHeaders().apply {
@@ -119,7 +120,8 @@ class PatientImplantInfoController(private val patientImplantInfoService: Patien
     @GetMapping("/generateImages/{patientId}/{hospitalId}")
     fun generateImages(
         @PathVariable("patientId") patientId: String,
-        @PathVariable("hospitalId") hospitalId: Int
+        @PathVariable("hospitalId") hospitalId: Int,
+        @RequestParam(value = "doctorId", required = false) doctorId: Int?
     ): ResponseEntity<List<ByteArray>> {
         return try {
             // Fetch patient details and implant info
@@ -136,8 +138,8 @@ class PatientImplantInfoController(private val patientImplantInfoService: Patien
             val hospital = hospitalService.getHospital(hospitalId)
                 ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null)
 
-            // Generate images
-            val imagesBytes = pdfService.generateImage(patientWithTheirImplants, hospital)
+            // Generate images with optional doctor signature
+            val imagesBytes = pdfService.generateImage(patientWithTheirImplants, hospital, doctorId)
 
             // Return images as binary data
             ResponseEntity.ok(imagesBytes)
@@ -150,10 +152,11 @@ class PatientImplantInfoController(private val patientImplantInfoService: Patien
     @GetMapping("/generateImage1/{patientId}/{hospitalId}")
     fun generateImage1(
         @PathVariable("patientId") patientId: String,
-        @PathVariable("hospitalId") hospitalId: Int
+        @PathVariable("hospitalId") hospitalId: Int,
+        @RequestParam(value = "doctorId", required = false) doctorId: Int?
     ): ResponseEntity<ByteArray> {
         return try {
-            val imageBytes = generateImagesHelper(patientId, hospitalId)[0] // First image
+            val imageBytes = generateImagesHelper(patientId, hospitalId, doctorId)[0] // First image
             ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_JPEG)
                 .body(imageBytes)
@@ -165,10 +168,11 @@ class PatientImplantInfoController(private val patientImplantInfoService: Patien
     @GetMapping("/generateImage2/{patientId}/{hospitalId}")
     fun generateImage2(
         @PathVariable("patientId") patientId: String,
-        @PathVariable("hospitalId") hospitalId: Int
+        @PathVariable("hospitalId") hospitalId: Int,
+        @RequestParam(value = "doctorId", required = false) doctorId: Int?
     ): ResponseEntity<ByteArray> {
         return try {
-            val imageBytes = generateImagesHelper(patientId, hospitalId)[1] // Second image
+            val imageBytes = generateImagesHelper(patientId, hospitalId, doctorId)[1] // Second image
             ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_JPEG)
                 .body(imageBytes)
@@ -178,7 +182,7 @@ class PatientImplantInfoController(private val patientImplantInfoService: Patien
     }
 
     // Helper function for reusability
-    fun generateImagesHelper(patientId: String, hospitalId: Int): List<ByteArray> {
+    fun generateImagesHelper(patientId: String, hospitalId: Int, doctorId: Int? = null): List<ByteArray> {
         val implantInfoByPatientIdList = patientImplantInfoService.getDetailsByPatientId(patientId)
         val patientDetail = patientService.getPatientDetail(patientId)
             ?: throw IllegalArgumentException("Patient not found for ID: $patientId")
@@ -191,7 +195,7 @@ class PatientImplantInfoController(private val patientImplantInfoService: Patien
         val hospital = hospitalService.getHospital(hospitalId)
             ?: throw IllegalArgumentException("Hospital not found for ID: $hospitalId")
 
-        return pdfService.generateImage(patientWithTheirImplants, hospital)
+        return pdfService.generateImage(patientWithTheirImplants, hospital, doctorId)
     }
 
 
