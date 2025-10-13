@@ -26,7 +26,7 @@ class Auth0SecurityConfig {
             .authorizeHttpRequests { authorizeHttpRequests ->
                 authorizeHttpRequests
                     .requestMatchers("/api/auth/**","/h2-console/**","/patients/**","/hospitals/**"
-                    ,"/patientImplantInfo/**","/implantInfo/**","/implant-print-history/**").permitAll()
+                    ,"/patientImplantInfo/**","/implantInfo/**","/implant-print-history/**","/doctors/**").permitAll()
                     .anyRequest().authenticated() // This should be the last call
             }
             .cors { cors -> cors.configure(http) }
