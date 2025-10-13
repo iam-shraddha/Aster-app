@@ -100,9 +100,9 @@ export default function SignIn(props) {
 
     let isValid = true;
 
-    if (!email.value || !/\S+@\S+\.\S+/.test(email.value)) {
+    if (!email.value) {
       setEmailError(true);
-      setEmailErrorMessage('Please enter a valid email address.');
+      setEmailErrorMessage('Please enter an email address.');
       isValid = false;
     } else {
       setEmailError(false);
