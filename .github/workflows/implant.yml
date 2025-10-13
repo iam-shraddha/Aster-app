@@ -48,4 +48,4 @@ jobs:
 
       # 8. Upload Docker tar to S3
       - name: Upload Docker tar to S3
-        run: aws s3 cp implant-app.tar s3://implant-img-bucket/req-files/implant-app.tar
+        run: aws s3 cp implant-app.tar s3://implant-img-bucket/test/implant-app.tar
