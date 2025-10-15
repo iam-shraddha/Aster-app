@@ -10,6 +10,7 @@ import * as Sentry from '@sentry/react';
 import { fetchPatientsByHospital, addPatient, submitPatientImplantInfo, fetchPatientPdf, fetchAllImplantsforid, useFetchImages, fetchImplantPdfforPreview, fetchImage1, fetchImage2 } from '../../services/api';
 import { addImplantPrintHistory, getImplantPrintHistoryByHospital } from '../../services/dasboardAPI';
 import { ToastContainer, toast } from 'react-toastify';
+import DoctorSelect from './DoctorSelect';
 import Footer from '../../pages/Footer';
 import EnhancedPagination from './EnhancedPagination';
 
@@ -42,6 +43,8 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [pdfContent, setPdfContent] = useState('');
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
+  const [selectedDoctorId, setSelectedDoctorId] = useState('');
 
 
   // const handlePageSizeChange = (event) => {
@@ -369,16 +372,27 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
       return;
     }
 
-    const { registrationNumber, hospitalId } = patient;
+    setSelectedPatient(patient);
+    setSelectedDoctorId(''); // Reset doctor selection
+    setIsDoctorModalOpen(true);
+  };
+
+  const handleDoctorSelection = async () => {
+    if (!selectedPatient) {
+      toast.error("No patient selected for export.");
+      return;
+    }
+
+    const { registrationNumber, hospitalId } = selectedPatient;
 
     try {
       // Show loader while fetching images
-      toast.info("Fetching images. Please wait...");
+      toast.info("Generating cards. Please wait...");
 
-      // Fetch Image 1 and Image 2 in parallel
+      // Fetch Image 1 and Image 2 in parallel with optional doctorId
       const [fetchedImage1, fetchedImage2] = await Promise.all([
-        fetchImage1(registrationNumber, hospitalId),
-        fetchImage2(registrationNumber, hospitalId),
+        fetchImage1(registrationNumber, hospitalId, selectedDoctorId || null),
+        fetchImage2(registrationNumber, hospitalId, selectedDoctorId || null),
       ]);
 
       if (fetchedImage1 && fetchedImage2) {
@@ -394,15 +408,25 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
         // Add a slight delay before downloading the second image
         setTimeout(async () => {
           await downloadImage(fetchedImage2, `${registrationNumber}_back_card.jpg`);
-          toast.success("Images exported successfully!");
+          toast.success("Cards generated successfully!");
         }, 500); // Delay of 500ms (adjust if necessary)
       } else {
         toast.error("Images are not available for export.");
       }
     } catch (error) {
       console.error("Error exporting images:", error);
-      toast.error("An error occurred while exporting images.");
+      toast.error("An error occurred while generating cards.");
+    } finally {
+      setIsDoctorModalOpen(false);
+      setSelectedPatient(null);
+      setSelectedDoctorId('');
     }
+  };
+
+  const handleCloseDoctorModal = () => {
+    setIsDoctorModalOpen(false);
+    setSelectedPatient(null);
+    setSelectedDoctorId('');
   };
 
   // Helper function to ensure the image is fully loaded
@@ -607,6 +631,103 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
               </Card>
             </Modal>
 
+            {/* Doctor Selection Modal */}
+            <Modal
+              open={isDoctorModalOpen}
+              onClose={handleCloseDoctorModal}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              }}
+            >
+              <Card
+                sx={{
+                  width: { xs: '90%', md: '500px' },
+                  borderRadius: '12px',
+                  backgroundColor: '#fff',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+                  position: 'relative',
+                  p: 3,
+                }}
+              >
+                <IconButton
+                  onClick={handleCloseDoctorModal}
+                  sx={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    color: '#000',
+                    backgroundColor: '#fff',
+                  }}
+                >
+                  <CloseIcon />
+                </IconButton>
+
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      fontWeight: 'bold',
+                      color: 'primary.main',
+                      textAlign: 'center',
+                      mb: 2,
+                    }}
+                  >
+                    Generate Patient Cards
+                  </Typography>
+                  
+                  {selectedPatient && (
+                    <Box sx={{ mb: 3, p: 2, backgroundColor: 'faint.main', borderRadius: 2 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Patient Details:
+                      </Typography>
+                      <Typography variant="body1" fontWeight="medium">
+                        {selectedPatient.patientName} ({selectedPatient.registrationNumber})
+                      </Typography>
+                    </Box>
+                  )}
+
+                  <DoctorSelect
+                    value={selectedDoctorId}
+                    onChange={setSelectedDoctorId}
+                    hospitalId={hospitalId}
+                    error={false}
+                    helperText=""
+                  />
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleCloseDoctorModal}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      px: 3,
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={handleDoctorSelection}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      px: 3,
+                      backgroundColor: 'primary.main',
+                      '&:hover': {
+                        backgroundColor: 'primary.dark',
+                      },
+                    }}
+                  >
+                    Generate Cards
+                  </Button>
+                </Box>
+              </Card>
+            </Modal>
 
           </Box>
         </Box>
