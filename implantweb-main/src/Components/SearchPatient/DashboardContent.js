@@ -19,7 +19,7 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
   const theme = useTheme();
   const location = useLocation();
   const hospitalId = propHospitalId || location.state?.hospitalId || localStorage.getItem('hospitalId');
-  const [setHistory] = useState([]);
+  const [history, setHistory] = useState([]);
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')); // Check if the screen is small
 
   // Ensure no redeclaration of 'hospitalId'
@@ -408,6 +408,7 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
         // Add a slight delay before downloading the second image
         setTimeout(async () => {
           await downloadImage(fetchedImage2, `${registrationNumber}_back_card.jpg`);
+          await addHistory(registrationNumber); 
           toast.success("Cards generated successfully!");
         }, 500); // Delay of 500ms (adjust if necessary)
       } else {
@@ -713,6 +714,7 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
                   <Button
                     variant="contained"
                     onClick={handleDoctorSelection}
+                    disabled={!selectedDoctorId}
                     sx={{
                       borderRadius: 2,
                       textTransform: 'none',
@@ -720,6 +722,10 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
                       backgroundColor: 'primary.main',
                       '&:hover': {
                         backgroundColor: 'primary.dark',
+                      },
+                      '&.Mui-disabled': {
+                        backgroundColor: 'grey.400',
+                        color: 'grey.700',
                       },
                     }}
                   >
