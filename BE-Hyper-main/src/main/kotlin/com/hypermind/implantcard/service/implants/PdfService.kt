@@ -806,6 +806,7 @@ class PdfService(private val doctorService: DoctorService) {
         private const val CARD_HEIGHT = 380
         private const val PADDING = 24
         private const val CORNER_RADIUS = 16
+        private const val TOP_LOGO_PADDING = 15 
     }
 
     fun generatePdf(patientWithImplants: PatientWithTheirImplants, hospital: Hospital): ByteArray {
@@ -950,7 +951,7 @@ class PdfService(private val doctorService: DoctorService) {
         drawHeaderSection(graphics, hospital, 0)
         drawPatientInformation(graphics, patientWithImplants, 0)
         drawSignature(graphics, 0, hospital)
-        drawImagePlaceholders(graphics, 0, hospital)
+        // drawImagePlaceholders(graphics, 0, hospital)
         drawFooter2(graphics, hospital, 0)
     }
 
@@ -959,7 +960,7 @@ class PdfService(private val doctorService: DoctorService) {
         drawHeaderSection(graphics, hospital, 0)
         drawPatientInformation(graphics, patientWithImplants, 0)
         drawSignatureWithDoctor(graphics, 0, hospital, doctor)
-        drawImagePlaceholders(graphics, 0, hospital)
+        // drawImagePlaceholders(graphics, 0, hospital)
         drawFooter2(graphics, hospital, 0)
     }
 
@@ -969,7 +970,7 @@ class PdfService(private val doctorService: DoctorService) {
         drawHeaderSection(graphics, hospital, yOffset)
         drawPatientInformation(graphics, patientWithImplants, yOffset)
         drawSignatureWithDoctor(graphics, yOffset, hospital, doctor)
-        drawImagePlaceholders(graphics, yOffset, hospital)
+        // drawImagePlaceholders(graphics, yOffset, hospital)
         drawFooter2(graphics, hospital, yOffset)
     }
     private fun drawBackCard(graphics: Graphics2D, hospital: Hospital, patientWithImplants: PatientWithTheirImplants) {
@@ -978,16 +979,28 @@ class PdfService(private val doctorService: DoctorService) {
         drawHeaderSection(graphics, hospital, yOffset)
         drawPatientInformation(graphics, patientWithImplants, yOffset)
         drawSignature(graphics, yOffset, hospital)
-        drawImagePlaceholders(graphics, yOffset, hospital)
+        // drawImagePlaceholders(graphics, yOffset, hospital)
         drawFooter2(graphics, hospital, yOffset)
     }
     private fun drawCardBackground(graphics: Graphics2D, yOffset: Int) {
+        // Fill the background of the card
+        graphics.color = Color.WHITE // Use white for the card background
+        graphics.fillRoundRect(
+            PADDING,
+            yOffset + PADDING,
+            CARD_WIDTH - 2 * PADDING,
+            CARD_HEIGHT - 2 * PADDING,
+            CORNER_RADIUS,
+            CORNER_RADIUS
+        )
+
+        // Draw the border of the card
         graphics.color = Color.BLACK
         graphics.drawRoundRect(
-            PADDING.toFloat().toInt(),
-            (PADDING + yOffset).toFloat().toInt(),
-            (CARD_WIDTH - 2 * PADDING).toFloat().toInt(),
-            (CARD_HEIGHT - 2 * PADDING).toFloat().toInt(),
+            PADDING,
+            yOffset + PADDING,
+            CARD_WIDTH - 2 * PADDING,
+            CARD_HEIGHT - 2 * PADDING,
             CORNER_RADIUS,
             CORNER_RADIUS
         )
@@ -1015,13 +1028,13 @@ class PdfService(private val doctorService: DoctorService) {
 
     private fun drawHeaderSection(graphics: Graphics2D, hospital: Hospital, yOffset: Int) {
         // Draw header background - match card background for seamless look
-        graphics.color = Color.decode("#F8F9FA")
-        graphics.fillRect(
-            PADDING + 1,  // Start 1px inside the border
-            yOffset + PADDING + 1,  // Start 1px inside the border
-            CARD_WIDTH - 2 * PADDING - 2,  // Width minus 2px for borders
-            PADDING * 3 - 2  // Height minus 2px for borders
-        )
+        // graphics.color = Color.decode("#F8F9FA")
+        // graphics.fillRect(
+        //     PADDING + 1,  // Start 1px inside the border
+        //     yOffset + PADDING + 1,  // Start 1px inside the border
+        //     CARD_WIDTH - 2 * PADDING - 2,  // Width minus 2px for borders
+        //     PADDING * 3 - 2  // Height minus 2px for borders
+        // )
         
         // No border - seamless integration with card background
         
@@ -1043,12 +1056,12 @@ class PdfService(private val doctorService: DoctorService) {
             }
 
             val aspectRatio = rightLogo.width.toFloat() / rightLogo.height.toFloat()
-            val logoSize = 50
+            val logoSize = 70 
             val logoWidth = logoSize
             val logoHeight = (logoSize / aspectRatio).toInt()
             
             val logoX = PADDING * 2
-            val logoY = yOffset + PADDING + (PADDING * 3 - logoHeight) / 2
+            val logoY = yOffset + PADDING + (PADDING * 3 - logoHeight) / 2 + TOP_LOGO_PADDING 
             
             graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
             graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
@@ -1070,11 +1083,11 @@ class PdfService(private val doctorService: DoctorService) {
             
             if (titleImage != null) {
                 val aspectRatio = titleImage.width.toFloat() / titleImage.height.toFloat()
-                val titleHeight = PADDING * 2
+                val titleHeight = PADDING * 3 
                 val titleWidth = (titleHeight * aspectRatio).toInt()
                 
                 val titleX = CARD_WIDTH - titleWidth - PADDING * 2
-                val titleY = yOffset + PADDING + (PADDING * 3 - titleHeight) / 2
+                val titleY = yOffset + PADDING + (PADDING * 3 - titleHeight) / 2 + TOP_LOGO_PADDING 
                 
                 graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
                 graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
@@ -1133,11 +1146,11 @@ class PdfService(private val doctorService: DoctorService) {
         graphics.color = Color.BLACK
         graphics.font = Font("Arial", Font.BOLD, 14)
 
-        val leftPadding = PADDING * 4// Left padding for the text
+        val leftPadding = PADDING * 3 
         val rightPadding = PADDING * 2 // Right padding for the text
         val contentWidth = CARD_WIDTH - leftPadding - rightPadding // Total available space for the text
 
-        var y = yOffset + PADDING * 3
+        var y = yOffset + PADDING * 6 
 
         val patientImplantInfoList = patientWithImplants.patientImplantInfoList
         val details = listOf(
@@ -1195,7 +1208,7 @@ class PdfService(private val doctorService: DoctorService) {
     }
 
     private fun drawSignature(graphics: Graphics2D, yOffset: Int, hospital: Hospital) {
-        val signatureY = yOffset + CARD_HEIGHT - PADDING * 7 // Adjusted to shift upward
+        val signatureY = yOffset + CARD_HEIGHT - PADDING * 4 
 
         // Fetching the image from the hospital API
         val authImageUrl = hospital.signature // Assuming there's a field in hospital API for the signature image URL
@@ -1213,7 +1226,7 @@ class PdfService(private val doctorService: DoctorService) {
         }
 
         // Define padding and adjusted dimensions for the image
-        val paddingLeft = 30 // Add left padding
+        val paddingLeft = 20 // Add left padding
         val imageWidth = 60  // Reduced image width
         val imageHeight = 30 // Reduced image height
 
@@ -1236,11 +1249,11 @@ class PdfService(private val doctorService: DoctorService) {
         // Auth. Sign text (aligned closely to the line)
         graphics.color = Color.BLACK
         graphics.font = Font("Arial", Font.PLAIN, 12)
-        graphics.drawString("Auth. Sign", CARD_WIDTH - 100, signatureY + PADDING - 10) // Shift text upward
+        graphics.drawString("Auth. Sign", CARD_WIDTH - 120, signatureY + PADDING - 10) 
     }
 
     private fun drawSignatureWithDoctor(graphics: Graphics2D, yOffset: Int, hospital: Hospital, doctor: Doctor?) {
-        val signatureY = yOffset + CARD_HEIGHT - PADDING * 7 // Adjusted to shift upward
+        val signatureY = yOffset + CARD_HEIGHT - PADDING * 4 
 
         // Determine which signature to use: doctor signature if available, otherwise hospital signature
         val signatureUrl = doctor?.signatureUrl ?: hospital.signature
@@ -1254,7 +1267,7 @@ class PdfService(private val doctorService: DoctorService) {
         }
 
         // Define padding and adjusted dimensions for the image
-        val paddingLeft = 30 // Add left padding
+        val paddingLeft = 20 // Add left padding
         val imageWidth = 60  // Reduced image width
         val imageHeight = 30 // Reduced image height
 
@@ -1285,7 +1298,18 @@ class PdfService(private val doctorService: DoctorService) {
             "Auth. Sign"
         }
         
-        graphics.drawString(signatureText, CARD_WIDTH - 100, signatureY + PADDING - 10) // Shift text upward
+        val metrics = graphics.fontMetrics
+        val textWidth = metrics.stringWidth(signatureText)
+        
+        val maxTextX = CARD_WIDTH - PADDING * 2
+        
+        val textX = if (CARD_WIDTH - 120 + textWidth > maxTextX) {
+            maxTextX - textWidth
+        } else {
+            CARD_WIDTH - 120
+        }
+
+        graphics.drawString(signatureText, textX, signatureY + PADDING - 10)
     }
 
     private fun createPlaceholderImage(): BufferedImage {
@@ -1298,37 +1322,38 @@ class PdfService(private val doctorService: DoctorService) {
     }
 
 
+    // this is bottom logo part fun including background color
 
-    private fun drawImagePlaceholders(graphics: Graphics2D, yOffset: Int, hospital: Hospital) {
-        // Set the background color to gray
-        graphics.color = Color.LIGHT_GRAY
-        val rowY = yOffset + CARD_HEIGHT - PADDING * 6 // Y-coordinate for the row
-        graphics.fillRect(PADDING + 1, rowY, CARD_WIDTH - 2 * PADDING - 1, 100) // Full row width, height of 100
+    // private fun drawImagePlaceholders(graphics: Graphics2D, yOffset: Int, hospital: Hospital) {
+    //     // Set the background color to gray
+    //     graphics.color = Color.LIGHT_GRAY
+    //     val rowY = yOffset + CARD_HEIGHT - PADDING * 6 // Y-coordinate for the row
+    //     graphics.fillRect(PADDING + 1, rowY, CARD_WIDTH - 2 * PADDING - 1, 100) // Full row width, height of 100
 
-        // Placeholder dimensions
-        val placeholderWidth = 100
-        val placeholderHeight = 60
-        val spaceWidth = (CARD_WIDTH - 2 * PADDING - 2 * placeholderWidth) / 3 // Calculate spaces between placeholders
+    //     // Placeholder dimensions
+    //     val placeholderWidth = 100
+    //     val placeholderHeight = 60
+    //     val spaceWidth = (CARD_WIDTH - 2 * PADDING - 2 * placeholderWidth) / 3 // Calculate spaces between placeholders
 
-        // Static image placeholder removed (redundant "PATIENT IMPLANT ID CARD" icon)
+    //     // Static image placeholder removed (redundant "PATIENT IMPLANT ID CARD" icon)
 
-        // Draw dynamic image placeholder
-        val dynamicImageX = PADDING + spaceWidth
-        try {
-            val dynamicImageUrl = hospital.logoFt
-            val dynamicImage = dynamicImageUrl?.let { fetchImage(it) }
-            if (dynamicImage != null) {
-                graphics.drawImage(dynamicImage, dynamicImageX, rowY + 10, placeholderWidth, placeholderHeight, null)
-            } else {
-                graphics.color = Color.RED
-                graphics.fillRect(dynamicImageX, rowY + 10, placeholderWidth, placeholderHeight)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            graphics.color = Color.RED
-            graphics.fillRect(dynamicImageX, rowY + 10, placeholderWidth, placeholderHeight)
-        }
-    }
+    //     // // Draw dynamic image placeholder
+    //     val dynamicImageX = PADDING + spaceWidth
+    //     try {
+    //         val dynamicImageUrl = hospital.logoFt
+    //         val dynamicImage = dynamicImageUrl?.let { fetchImage(it) }
+    //         if (dynamicImage != null) {
+    //             graphics.drawImage(dynamicImage, dynamicImageX, rowY + 10, placeholderWidth, placeholderHeight, null)
+    //         } else {
+    //             graphics.color = Color.RED
+    //             graphics.fillRect(dynamicImageX, rowY + 10, placeholderWidth, placeholderHeight)
+    //         }
+    //      } catch (e: Exception) {
+    //          e.printStackTrace()
+    //           graphics.color = Color.RED
+    //           graphics.fillRect(dynamicImageX, rowY + 10, placeholderWidth, placeholderHeight)
+    //      }
+    // }
 
 
     private fun drawFooter(graphics: Graphics2D, hospital: Hospital, yOffset: Int) {
@@ -1338,54 +1363,54 @@ class PdfService(private val doctorService: DoctorService) {
         val marginBottom = PADDING
 
         // Simple footer background
-        graphics.color = Color.WHITE
-        graphics.fillRect(
-            PADDING + 3,
-            footerY,
-            CARD_WIDTH / 2,
-            footerHeight - marginBottom
-        )
+        // graphics.color = Color.WHITE
+        // graphics.fillRect(
+        //     PADDING + 3,
+        //     footerY,
+        //     CARD_WIDTH / 2,
+        //     footerHeight - marginBottom
+        // )
 
         // Simple text
         graphics.color = Color.decode("#00008B")
         graphics.font = Font("Arial", Font.BOLD, 12)
 
         val leftTextY = footerY + PADDING
-        graphics.drawString(hospital.contactNumber ?: "NA", PADDING * 3, leftTextY)
-        graphics.drawString(hospital.websiteAddress ?: "NA", PADDING * 3, leftTextY + PADDING)
+        graphics.drawString("Contact No: ${hospital.contactNumber ?: "NA"}", PADDING * 3, leftTextY)
+        graphics.drawString("Website: ${hospital.websiteAddress ?: "NA"}", PADDING * 3, leftTextY + PADDING)
         
         // Simple contact info
         graphics.drawString("Toll Free: 1800-123-4567", PADDING * 3, leftTextY + PADDING * 2)
-        graphics.drawString("Emergency: 911", PADDING * 3, leftTextY + PADDING * 3)
+        graphics.drawString("Landline: 0231 6622555", PADDING * 3, leftTextY + PADDING * 3)
 
         // Right section - Dynamic image from hospital (right half)
-        val imageUrl = hospital.logoFt
-        try {
-            val hospitalImage: BufferedImage = imageUrl?.let { fetchImage(it) }!!
+        // val imageUrl = hospital.logoFt
+        // try {
+        //     val hospitalImage: BufferedImage = imageUrl?.let { fetchImage(it) }!!
 
-            // Set image width to cover the entire right half of the footer
-            val imageWidth = CARD_WIDTH / 2 - 50 // Image should cover half the width
-            val imageHeight = footerHeight - marginBottom // Image height adjusted to fit the row
+        //     // Set image width to cover the entire right half of the footer
+        //     val imageWidth = CARD_WIDTH / 2 - 50 // Image should cover half the width
+        //     val imageHeight = footerHeight - marginBottom // Image height adjusted to fit the row
 
-            // Image position
-            val imageX = CARD_WIDTH / 2 + PADDING // Right half, add padding on the X-axis
-            val imageY = footerY + (footerHeight - marginBottom - imageHeight) / 2 // Center the image vertically
+        //     // Image position
+        //     val imageX = CARD_WIDTH / 2 + PADDING // Right half, add padding on the X-axis
+        //     val imageY = footerY + (footerHeight - marginBottom - imageHeight) / 2 // Center the image vertically
 
-            // Draw the image
-            graphics.drawImage(hospitalImage, imageX, imageY, imageWidth, imageHeight, null)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            // Fallback: Placeholder for the image
-            val placeholderHeight = footerHeight - marginBottom // Adjust placeholder height
-            val placeholderWidth = placeholderHeight * 3 / 2 // Assuming a 3:2 aspect ratio
-            val placeholderX = CARD_WIDTH / 2 + PADDING // Right half, add some padding on the X-axis
-            val placeholderY = footerY + (footerHeight - marginBottom - placeholderHeight) / 2
+        //     // Draw the image
+        //     graphics.drawImage(hospitalImage, imageX, imageY, imageWidth, imageHeight, null)
+        // } catch (e: Exception) {
+        //     e.printStackTrace()
+        //     // Fallback: Placeholder for the image
+        //     val placeholderHeight = footerHeight - marginBottom // Adjust placeholder height
+        //     val placeholderWidth = placeholderHeight * 3 / 2 // Assuming a 3:2 aspect ratio
+        //     val placeholderX = CARD_WIDTH / 2 + PADDING // Right half, add some padding on the X-axis
+        //     val placeholderY = footerY + (footerHeight - marginBottom - placeholderHeight) / 2
 
-            graphics.color = Color.LIGHT_GRAY
-            graphics.fillRect(placeholderX, placeholderY, placeholderWidth, placeholderHeight)
-            graphics.color = Color.RED
-            graphics.drawString("No Image", placeholderX + 10, placeholderY + placeholderHeight / 2)
-        }
+        //     graphics.color = Color.LIGHT_GRAY
+        //     graphics.fillRect(placeholderX, placeholderY, placeholderWidth, placeholderHeight)
+        //     graphics.color = Color.RED
+        //     graphics.drawString("No Image", placeholderX + 10, placeholderY + placeholderHeight / 2)
+        // }
     }
 
 
@@ -1394,15 +1419,17 @@ class PdfService(private val doctorService: DoctorService) {
         // Footer dimensions
         val footerHeight = 30 // Reduced height for the footer
         val footerY = yOffset + CARD_HEIGHT - footerHeight - PADDING
+        val footerX = PADDING + 1
+        val footerWidth = CARD_WIDTH - PADDING * 2 - 1
 
         // Footer background with sharp upper corners and rounded lower corners
         graphics.color = if (yOffset == 0) Color.decode("#1F2937") else Color.decode("#0D9488")
 
         // Rounded bottom corners
         graphics.fillRoundRect(
-            PADDING + 2,                          // X position
+            footerX,                              // X position
             footerY,                              // Y position
-            CARD_WIDTH - PADDING * 2,             // Width
+            footerWidth,                          // Width
             footerHeight,                         // Height
             CORNER_RADIUS,                        // Arc width
             CORNER_RADIUS                         // Arc height
@@ -1410,9 +1437,9 @@ class PdfService(private val doctorService: DoctorService) {
 
         // Overlay a rectangle on the top to create sharp upper corners
         graphics.fillRect(
-            PADDING + 2,                          // X position
+            footerX,                              // X position
             footerY,                              // Y position
-            CARD_WIDTH - PADDING * 2,             // Width
+            footerWidth,                          // Width
             footerHeight - CORNER_RADIUS          // Height to cover the rounded top
         )
 
