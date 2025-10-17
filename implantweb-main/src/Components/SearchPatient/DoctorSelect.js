@@ -80,7 +80,7 @@ const DoctorSelect = ({ value, onChange, error, helperText, hospitalId }) => {
 
   return (
     <FormControl fullWidth error={error}>
-      <InputLabel id="doctor-select-label">Select Doctor (Optional)</InputLabel>
+      {/* <InputLabel id="doctor-select-label">Select Doctor (Optional)</InputLabel> */}
       <Select
         labelId="doctor-select-label"
         value={value || ''}
