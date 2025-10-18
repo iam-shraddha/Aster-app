@@ -12,9 +12,7 @@ class WebConfig : WebMvcConfigurer {
                 "http://localhost:3000", // React dev server
                 "http://localhost:8080",
                 "https://implantweb.vercel.app", //Production frontend,
-                "https://implant.hyperminds.tech",
-                "http://52.66.203.74:8080",
-                "http://52.66.203.74:3000"
+                "https://implant.hyperminds.tech"
             )
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Allowed HTTP methods
             .allowedHeaders("*") // Allow all headers
