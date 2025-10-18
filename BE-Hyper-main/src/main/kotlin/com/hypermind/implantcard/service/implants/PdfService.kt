@@ -806,30 +806,7 @@ class PdfService(private val doctorService: DoctorService) {
         private const val CARD_HEIGHT = 380
         private const val PADDING = 24
         private const val CORNER_RADIUS = 16
-        private const val TOP_LOGO_PADDING = 15
-    }
-
-    // Pre-load fonts to avoid repeated loading
-    private val fontArialBold12: Font = loadFont(Font.BOLD, 12f)
-    private val fontArialBold14: Font = loadFont(Font.BOLD, 14f)
-    private val fontArialBold15: Font = loadFont(Font.BOLD, 15f)
-    private val fontArialPlain12: Font = loadFont(Font.PLAIN, 12f)
-
-    // Helper function to load the font
-    private fun loadFont(style: Int, size: Float): Font {
-        return try {
-            val inputStream: InputStream? = PdfService::class.java.getResourceAsStream("/fonts/arialbd.TTF")
-            if (inputStream != null) {
-                val customFont = Font.createFont(Font.TRUETYPE_FONT, inputStream)
-                customFont.deriveFont(style, size)
-            } else {
-                println("ERROR: Embedded font /fonts/arialbd.TTF not found. Falling back to SansSerif.")
-                Font("SansSerif", style, size.roundToInt())
-            }
-        } catch (e: Exception) {
-            println("ERROR loading embedded font: ${e.message}. Falling back to SansSerif.")
-            Font("SansSerif", style, size.roundToInt())
-        }
+        private const val TOP_LOGO_PADDING = 15 
     }
 
     fun generatePdf(patientWithImplants: PatientWithTheirImplants, hospital: Hospital): ByteArray {
@@ -1094,7 +1071,7 @@ class PdfService(private val doctorService: DoctorService) {
         } catch (e: Exception) {
             e.printStackTrace()
             graphics.color = Color.decode("#0D9488")
-            graphics.font = fontArialBold12
+            graphics.font = Font("Arial", Font.BOLD, 12)
             graphics.drawString("MEDICAL CLINIC", PADDING * 2, yOffset + PADDING * 2)
         }
     }
@@ -1119,14 +1096,14 @@ class PdfService(private val doctorService: DoctorService) {
             } else {
                 // Fallback text
                 graphics.color = Color.BLACK
-                graphics.font = fontArialBold14
+                graphics.font = Font("Arial", Font.BOLD, 14)
                 graphics.drawString("PATIENT IMPLANT ID CARD", CARD_WIDTH - 200, yOffset + PADDING * 2)
             }
         } catch (e: Exception) {
             e.printStackTrace()
             // Fallback text
             graphics.color = Color.BLACK
-            graphics.font = fontArialBold14
+            graphics.font = Font("Arial", Font.BOLD, 14)
             graphics.drawString("PATIENT IMPLANT ID CARD", CARD_WIDTH - 200, yOffset + PADDING * 2)
         }
     }
@@ -1150,7 +1127,7 @@ class PdfService(private val doctorService: DoctorService) {
 
         // Warning text
         graphics.color = Color.WHITE
-        graphics.font = fontArialBold15
+        graphics.font = Font("Arial", Font.BOLD, 15)
         drawWrappedText(
             graphics,
             "The person has a metal implant in their body, which could potentially trigger a metal detection device",
@@ -1167,9 +1144,9 @@ class PdfService(private val doctorService: DoctorService) {
 
     private fun drawPatientInformation(graphics: Graphics2D, patientWithImplants: PatientWithTheirImplants, yOffset: Int) {
         graphics.color = Color.BLACK
-        graphics.font = fontArialBold14
+        graphics.font = Font("Arial", Font.BOLD, 14)
 
-        val leftPadding = PADDING * 3 
+        val leftPadding = PADDING * 2 
         val rightPadding = PADDING * 2 // Right padding for the text
         val contentWidth = CARD_WIDTH - leftPadding - rightPadding // Total available space for the text
 
@@ -1271,7 +1248,7 @@ class PdfService(private val doctorService: DoctorService) {
 
         // Auth. Sign text (aligned closely to the line)
         graphics.color = Color.BLACK
-        graphics.font = fontArialPlain12
+        graphics.font = Font("Arial", Font.PLAIN, 12)
         graphics.drawString("Auth. Sign", CARD_WIDTH - 120, signatureY + PADDING - 10) 
     }
 
@@ -1312,7 +1289,7 @@ class PdfService(private val doctorService: DoctorService) {
 
         // Auth. Sign text (aligned closely to the line)
         graphics.color = Color.BLACK
-        graphics.font = fontArialPlain12
+        graphics.font = Font("Arial", Font.PLAIN, 12)
         
         // Display doctor name if doctor is provided, otherwise show "Auth. Sign"
         val signatureText = if (doctor != null) {
@@ -1396,15 +1373,15 @@ class PdfService(private val doctorService: DoctorService) {
 
         // Simple text
         graphics.color = Color.decode("#00008B")
-        graphics.font = fontArialBold12
+        graphics.font = Font("Arial", Font.BOLD, 12)
 
         val leftTextY = footerY + PADDING
-        graphics.drawString("Contact No: ${hospital.contactNumber ?: "NA"}", PADDING * 3, leftTextY)
-        graphics.drawString("Website: ${hospital.websiteAddress ?: "NA"}", PADDING * 3, leftTextY + PADDING)
+        graphics.drawString("Contact No: ${hospital.contactNumber ?: "NA"}", PADDING * 2, leftTextY)
+        graphics.drawString("Website: ${hospital.websiteAddress ?: "NA"}", PADDING * 2, leftTextY + PADDING)
         
         // Simple contact info
-        graphics.drawString("Toll Free: 1800-123-4567", PADDING * 3, leftTextY + PADDING * 2)
-        graphics.drawString("Landline: 0231 6622555", PADDING * 3, leftTextY + PADDING * 3)
+        graphics.drawString("Toll Free: 1800-123-4567", PADDING * 2, leftTextY + PADDING * 2)
+        graphics.drawString("Landline: 0231 6622555", PADDING * 2, leftTextY + PADDING * 3)
 
         // Right section - Dynamic image from hospital (right half)
         // val imageUrl = hospital.logoFt
@@ -1468,7 +1445,7 @@ class PdfService(private val doctorService: DoctorService) {
 
         // Footer text
         graphics.color = Color.WHITE
-        graphics.font = fontArialBold14
+        graphics.font = Font("Arial", Font.BOLD, 14)
 
         // Get the contact number and website address
         val contactText = hospital.contactNumber ?: "NA"
@@ -1476,7 +1453,8 @@ class PdfService(private val doctorService: DoctorService) {
 
         // Calculate the width of the entire text including separator "|"
         val separator = " | "
-        val totalText = "$contactText$separator$websiteText"
+        // val totalText = "$contactText$separator$websiteText"
+        val totalText = "$websiteText"
 
         val totalWidth = graphics.fontMetrics.stringWidth(totalText)
 
