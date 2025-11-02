@@ -17,7 +17,6 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
   const theme = useTheme();
   const location = useLocation();
   const hospitalId = propHospitalId || location.state?.hospitalId || localStorage.getItem('hospitalId');
-  const [history, setHistory] = useState([]);
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')); // Check if the screen is small
 
   // Ensure no redeclaration of 'hospitalId'
@@ -291,7 +290,6 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
         // Add a slight delay before downloading the second image
         setTimeout(async () => {
           await downloadImage(fetchedImage2, `${registrationNumber}_back_card.jpg`);
-          await addHistory(registrationNumber); 
           toast.success("Cards generated successfully!");
         }, 500); // Delay of 500ms (adjust if necessary)
       } else {
@@ -334,12 +332,12 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
 
         // Create a print window with both images
         const printWindow = window.open('', '_blank');
-        
+
         if (!printWindow) {
           toast.error("Pop-up blocked. Please allow pop-ups and try again.");
           return;
         }
-        
+
         printWindow.document.write(`
           <!DOCTYPE html>
           <html>
@@ -407,9 +405,9 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
             </body>
           </html>
         `);
-        
+
         printWindow.document.close();
-        
+
         toast.success("Print preview opened!");
       } else {
         toast.error("Images are not available for printing.");
@@ -693,7 +691,7 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
                   >
                     Generate Patient Cards
                   </Typography>
-                  
+
                   {selectedPatient && (
                     <Box sx={{ mb: 3, p: 2, backgroundColor: 'faint.main', borderRadius: 2 }}>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
