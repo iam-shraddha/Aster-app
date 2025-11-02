@@ -6,13 +6,11 @@ import PatientTable from './PatientTable';
 import AddPatientForm from './AddPatientForm';
 import Sidebar from '../../Sidebar';
 import { useLocation } from 'react-router-dom';
-import * as Sentry from '@sentry/react';
-import { fetchPatientsByHospital, addPatient, submitPatientImplantInfo, fetchPatientPdf, fetchAllImplantsforid, useFetchImages, fetchImplantPdfforPreview, fetchImage1, fetchImage2 } from '../../services/api';
-import { addImplantPrintHistory, getImplantPrintHistoryByHospital } from '../../services/dasboardAPI';
+import { fetchPatientsByHospital, addPatient, submitPatientImplantInfo, fetchPatientPdf, fetchAllImplantsforid, fetchImage1, fetchImage2 } from '../../services/api';
 import { ToastContainer, toast } from 'react-toastify';
 import DoctorSelect from './DoctorSelect';
 import Footer from '../../pages/Footer';
-import EnhancedPagination from './EnhancedPagination';
+import SmartCardPrinter from '../SmartCardPrinter';
 
 
 const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) => {
@@ -27,24 +25,20 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
 
   const [searchCategory, setSearchCategory] = useState('registrationNumber');
   const [searchValue, setSearchValue] = useState('');
-  const [isOpen, setIsOpen] = useState(true);
   const [showAddPatientForm, setShowAddPatientForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [filteredPatients, setFilteredPatients] = useState([]);
   const [editingPatient, setEditingPatient] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
-  const [pdfUrl, setPdfUrl] = useState('');
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [patients, setPatients] = useState([]);
   const [pageSize] = useState(1000);
-  const { frontPageImage, backPageImage, fetchImages } = useFetchImages();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isJpegModalOpen, setIsJpegModalOpen] = useState(false);
+  const [isOpen] = useState(true);
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [pdfContent, setPdfContent] = useState('');
-  const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
+  const [isSmartCardPrinterOpen, setIsSmartCardPrinterOpen] = useState(false);
 
 
   // const handlePageSizeChange = (event) => {
@@ -68,66 +62,6 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
     } finally {
       setLoading(false); // Hide loading indicator after fetching
     }
-  };
-
-  const handleOpenModal = (patient) => {
-    setSelectedPatient(patient);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedPatient(null);
-  };
-
-  const handleOpenPrintModal = (patient) => {
-    setSelectedPatient(patient); // Set the patient for whom the format needs to be selected
-    setIsModalOpen(true); // Open the modal
-  };
-
-  const handleExportAsPdf = async () => {
-    if (!selectedPatient) return;
-
-    try {
-      setIsPdfLoading(true); // Indicate loading
-      const pdfBlob = await fetchPatientPdf(selectedPatient.registrationNumber, hospitalId);
-      const pdfBlobUrl = URL.createObjectURL(pdfBlob);
-
-      // Trigger print via iframe
-      const iframe = document.createElement('iframe');
-      iframe.src = pdfBlobUrl;
-      iframe.style.display = 'none';
-      document.body.appendChild(iframe);
-
-      iframe.onload = () => {
-        iframe.contentWindow.print();
-        document.body.removeChild(iframe); // Clean up
-        toast.success('PDF exported and printed successfully!');
-      };
-    } catch (error) {
-      console.error('Error exporting PDF:', error);
-      toast.error('Failed to export PDF.');
-    } finally {
-      setIsPdfLoading(false);
-      handleCloseModal();
-    }
-  };
-
-
-  const handleJpegExport = async () => {
-    if (!selectedPatient) {
-      toast.error('No patient selected for export.');
-      return;
-    }
-
-    // Call fetchImages directly
-    await fetchImages(selectedPatient.registrationNumber, hospitalId);
-    console.log('Opening JPEG modal'); // Log before opening the modal
-    setIsJpegModalOpen(true); // Open the modal to show images
-  };
-
-  const handleCloseJpegModal = () => {
-    setIsJpegModalOpen(false);
   };
 
   useEffect(() => {
@@ -290,42 +224,6 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
   };
 
 
-  useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        const data = await getImplantPrintHistoryByHospital(hospitalId);
-        setHistory(data);
-      } catch (error) {
-        console.error('Error fetching history:', error);
-      }
-    };
-
-    if (hospitalId) fetchHistory();
-  }, [hospitalId]);
-
-
-  // Add implant print history
-  const addHistory = async (regNumber) => {
-    if (!regNumber) {
-      console.error('Registration number is missing!');
-      return;
-    }
-
-    const newEntry = {
-      hospitalId,
-      patientId: regNumber,
-      printDate: new Date().toISOString(),
-    };
-
-    try {
-      await addImplantPrintHistory(newEntry);
-      const updatedHistory = await getImplantPrintHistoryByHospital(hospitalId);
-      setHistory(updatedHistory);
-      console.log("Print date:", newEntry.printDate);
-    } catch (error) {
-      console.error('Error adding history:', error);
-    }
-  };
   const onPreviewPatient = async (patient) => {
     if (!patient) {
       toast.error("No patient selected for preview.");
@@ -349,21 +247,6 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
   const closePreviewDialog = () => {
     setIsPreviewDialogOpen(false); // Close the dialog
     setPdfContent(''); // Clear the PDF content
-  };
-
-
-  const fetchPreviewPdf = async (patient, hospitalId) => {
-    setIsPdfLoading(true);
-    try {
-      const pdfBlob = await fetchImplantPdfforPreview(patient.registrationNumber, hospitalId);
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      setPdfUrl(pdfUrl); // Set the PDF URL for display
-    } catch (error) {
-      console.error("Error fetching PDF:", error.message);
-      toast.error("Failed to fetch the PDF for preview.");
-    } finally {
-      setIsPdfLoading(false); // Hide loading indicator after fetching
-    }
   };
 
   const onPrintPatient = async (patient) => {
@@ -424,10 +307,142 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
     }
   };
 
+  const handleDirectPrint = async () => {
+    if (!selectedPatient) {
+      toast.error("No patient selected for printing.");
+      return;
+    }
+
+    const { registrationNumber, hospitalId } = selectedPatient;
+
+    try {
+      // Show loader while fetching images
+      toast.info("Generating cards for printing. Please wait...");
+
+      // Fetch Image 1 and Image 2 in parallel with optional doctorId
+      const [fetchedImage1, fetchedImage2] = await Promise.all([
+        fetchImage1(registrationNumber, hospitalId, selectedDoctorId || null),
+        fetchImage2(registrationNumber, hospitalId, selectedDoctorId || null),
+      ]);
+
+      if (fetchedImage1 && fetchedImage2) {
+        // Ensure images are fully loaded
+        await Promise.all([
+          loadImage(fetchedImage1),
+          loadImage(fetchedImage2),
+        ]);
+
+        // Create a print window with both images
+        const printWindow = window.open('', '_blank');
+        
+        if (!printWindow) {
+          toast.error("Pop-up blocked. Please allow pop-ups and try again.");
+          return;
+        }
+        
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Print - ${registrationNumber}</title>
+              <style>
+                @media print {
+                  body {
+                    margin: 0;
+                    padding: 10px;
+                  }
+                  .card-container {
+                    page-break-after: always;
+                    margin-bottom: 20px;
+                  }
+                  .card-container:last-child {
+                    page-break-after: avoid;
+                  }
+                  h2 {
+                    display: none;
+                  }
+                }
+                @page {
+                  margin: 0.5cm;
+                }
+                body {
+                  font-family: Arial, sans-serif;
+                  margin: 20px;
+                }
+                .card-container {
+                  margin-bottom: 20px;
+                }
+                h2 {
+                  margin-bottom: 10px;
+                  font-size: 18px;
+                  color: #333;
+                }
+                img {
+                  width: 100%;
+                  max-width: 600px;
+                  height: auto;
+                  border: 1px solid #ccc;
+                  display: block;
+                  margin: 0 auto;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="card-container">
+                <h2>Front Card - ${registrationNumber}</h2>
+                <img src="${fetchedImage1}" alt="Front Card" onload="console.log('Image 1 loaded')" />
+              </div>
+              <div class="card-container">
+                <h2>Back Card - ${registrationNumber}</h2>
+                <img src="${fetchedImage2}" alt="Back Card" onload="console.log('Image 2 loaded')" />
+              </div>
+              <script>
+                // Wait for all images to load before triggering print
+                window.onload = function() {
+                  setTimeout(function() {
+                    window.print();
+                  }, 500);
+                };
+              </script>
+            </body>
+          </html>
+        `);
+        
+        printWindow.document.close();
+        
+        toast.success("Print preview opened!");
+      } else {
+        toast.error("Images are not available for printing.");
+      }
+    } catch (error) {
+      console.error("Error printing images:", error);
+      toast.error("An error occurred while generating print preview.");
+    } finally {
+      setIsDoctorModalOpen(false);
+      setSelectedPatient(null);
+      setSelectedDoctorId('');
+    }
+  };
+
   const handleCloseDoctorModal = () => {
     setIsDoctorModalOpen(false);
     setSelectedPatient(null);
     setSelectedDoctorId('');
+  };
+
+  const handleOpenSmartCardPrinter = () => {
+    if (!selectedPatient) {
+      toast.error("No patient selected for smart card printing.");
+      return;
+    }
+    // Keep doctor modal open but open smart card printer in a new modal
+    setIsSmartCardPrinterOpen(true);
+  };
+
+  const handleCloseSmartCardPrinter = () => {
+    setIsSmartCardPrinterOpen(false);
+    // Optionally close the doctor modal too
+    // handleCloseDoctorModal();
   };
 
   // Helper function to ensure the image is fully loaded
@@ -699,7 +714,7 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
                   />
                 </Box>
 
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                   <Button
                     variant="outlined"
                     onClick={handleCloseDoctorModal}
@@ -729,8 +744,94 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
                       },
                     }}
                   >
-                    Generate Cards
+                    Download Cards
                   </Button>
+                  <Button
+                    variant="contained"
+                    onClick={handleDirectPrint}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      px: 3,
+                      backgroundColor: '#1976d2',
+                      '&:hover': {
+                        backgroundColor: '#1565c0',
+                      },
+                    }}
+                  >
+                    Print Directly
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={handleOpenSmartCardPrinter}
+                    disabled={!selectedDoctorId}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      px: 3,
+                      backgroundColor: '#9c27b0',
+                      '&:hover': {
+                        backgroundColor: '#7b1fa2',
+                      },
+                      '&.Mui-disabled': {
+                        backgroundColor: 'grey.400',
+                        color: 'grey.700',
+                      },
+                    }}
+                  >
+                    Print Smart Card
+                  </Button>
+                </Box>
+              </Card>
+            </Modal>
+
+            {/* Smart Card Printer Modal */}
+            <Modal
+              open={isSmartCardPrinterOpen}
+              onClose={handleCloseSmartCardPrinter}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              }}
+            >
+              <Card
+                sx={{
+                  width: { xs: '95%', md: '90%' },
+                  maxWidth: '900px',
+                  maxHeight: '95vh',
+                  borderRadius: '12px',
+                  backgroundColor: '#fff',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+                  position: 'relative',
+                  overflow: 'auto',
+                }}
+              >
+                <IconButton
+                  onClick={handleCloseSmartCardPrinter}
+                  sx={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    color: '#000',
+                    backgroundColor: '#fff',
+                    zIndex: 1,
+                    '&:hover': {
+                      backgroundColor: '#f5f5f5',
+                    },
+                  }}
+                >
+                  <CloseIcon />
+                </IconButton>
+                <Box sx={{ p: { xs: 2, md: 3 }, mt: 4 }}>
+                  {selectedPatient && (
+                    <SmartCardPrinter
+                      userId={selectedPatient.registrationNumber}
+                      hospitalId={selectedPatient.hospitalId || hospitalId}
+                      doctorId={selectedDoctorId || null}
+                    />
+                  )}
                 </Box>
               </Card>
             </Modal>
