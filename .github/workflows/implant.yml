@@ -33,13 +33,13 @@ jobs:
       # 5. Tag image for ECR
       - name: Tag Docker image for ECR
         run: |
-          IMAGE_URI=490004626092.dkr.ecr.ap-south-1.amazonaws.com/implant-repo:latest
+          IMAGE_URI=047719626604.dkr.ecr.ap-south-1.amazonaws.com/implant-repo:latest
           docker tag implant-app:latest $IMAGE_URI
 
       # 6. Push Docker image to ECR
       - name: Push Docker image to ECR
         run: |
-          IMAGE_URI=490004626092.dkr.ecr.ap-south-1.amazonaws.com/implant-repo:latest
+          IMAGE_URI=047719626604.dkr.ecr.ap-south-1.amazonaws.com/implant-repo:latest
           docker push $IMAGE_URI
 
       # 7. Save Docker image as tar
@@ -48,4 +48,4 @@ jobs:
 
       # 8. Upload Docker tar to S3
       - name: Upload Docker tar to S3
-        run: aws s3 cp implant-app.tar s3://implant-img-bucket/test/implant-app.tar
+        run: aws s3 cp implant-app.tar s3://implant-img-bucket1/test/implant-app.tar
