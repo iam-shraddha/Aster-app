@@ -6,7 +6,7 @@ import Sidebar from '../Sidebar';
 
 const About = () => {
     const theme = useTheme();
-    const [isOpen, setIsOpen] = useState(true);
+    const [isOpen] = useState(true);
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')); // Check if the screen is small
 
     return (

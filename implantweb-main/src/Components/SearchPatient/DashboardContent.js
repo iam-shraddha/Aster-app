@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, Paper, Typography, Modal, Card, IconButton, CircularProgress, useTheme, useMediaQuery, } from '@mui/material';
+import { Box, Button, Paper, Typography, Modal, Card, IconButton, CircularProgress, useTheme, useMediaQuery, FormGroup, FormControlLabel, Checkbox } from '@mui/material';
 import { Add as AddIcon, Close as CloseIcon } from '@mui/icons-material';
 import SearchBar from './SearchBar';
 import PatientTable from './PatientTable';
@@ -7,16 +7,31 @@ import AddPatientForm from './AddPatientForm';
 import Sidebar from '../../Sidebar';
 import { useLocation } from 'react-router-dom';
 import { fetchPatientsByHospital, addPatient, submitPatientImplantInfo, fetchPatientPdf, fetchAllImplantsforid, fetchImage1, fetchImage2 } from '../../services/api';
+import { addImplantPrintHistory, getImplantPrintHistoryByHospital } from '../../services/dasboardAPI';
 import { ToastContainer, toast } from 'react-toastify';
 import DoctorSelect from './DoctorSelect';
 import Footer from '../../pages/Footer';
-import SmartCardPrinter from '../SmartCardPrinter';
+
+const CARD_SIDE_OPTION = {
+  FRONT: 'front',
+  BACK: 'back',
+  BOTH: 'both',
+};
+
+const CARD_SIDE_LABELS = {
+  [CARD_SIDE_OPTION.FRONT]: 'Front Side',
+  [CARD_SIDE_OPTION.BACK]: 'Back Side',
+  [CARD_SIDE_OPTION.BOTH]: 'Both',
+};
+
+const CARD_SIDE_PREFERENCE_KEY = 'card_side_print_preference_v1';
 
 
 const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) => {
   const theme = useTheme();
   const location = useLocation();
   const hospitalId = propHospitalId || location.state?.hospitalId || localStorage.getItem('hospitalId');
+  const [, setHistory] = useState([]);
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')); // Check if the screen is small
 
   // Ensure no redeclaration of 'hospitalId'
@@ -37,7 +52,24 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
   const [pdfContent, setPdfContent] = useState('');
   const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
-  const [isSmartCardPrinterOpen, setIsSmartCardPrinterOpen] = useState(false);
+  const [cardSideSelection, setCardSideSelection] = useState(CARD_SIDE_OPTION.BOTH);
+  const [saveCardSidePreference, setSaveCardSidePreference] = useState(false);
+
+  useEffect(() => {
+    try {
+      const savedCardSide = localStorage.getItem(CARD_SIDE_PREFERENCE_KEY);
+      if (
+        savedCardSide === CARD_SIDE_OPTION.FRONT ||
+        savedCardSide === CARD_SIDE_OPTION.BACK ||
+        savedCardSide === CARD_SIDE_OPTION.BOTH
+      ) {
+        setCardSideSelection(savedCardSide);
+        setSaveCardSidePreference(true);
+      }
+    } catch (error) {
+      console.error('Failed to read saved card side preference:', error);
+    }
+  }, []);
 
 
   // const handlePageSizeChange = (event) => {
@@ -222,6 +254,26 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
     setShowAddPatientForm(true);
   };
 
+  const addHistory = async (registrationNumber) => {
+    if (!registrationNumber) {
+      return;
+    }
+
+    const newEntry = {
+      hospitalId,
+      patientId: registrationNumber,
+      printDate: new Date().toISOString(),
+    };
+
+    try {
+      await addImplantPrintHistory(newEntry);
+      const updatedHistory = await getImplantPrintHistoryByHospital(hospitalId);
+      setHistory(updatedHistory);
+    } catch (error) {
+      console.error('Error adding print history:', error);
+    }
+  };
+
 
   const onPreviewPatient = async (patient) => {
     if (!patient) {
@@ -268,30 +320,44 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
     const { registrationNumber, hospitalId } = selectedPatient;
 
     try {
+      if (saveCardSidePreference) {
+        localStorage.setItem(CARD_SIDE_PREFERENCE_KEY, cardSideSelection);
+      } else {
+        localStorage.removeItem(CARD_SIDE_PREFERENCE_KEY);
+      }
+
       // Show loader while fetching images
       toast.info("Generating cards. Please wait...");
 
-      // Fetch Image 1 and Image 2 in parallel with optional doctorId
-      const [fetchedImage1, fetchedImage2] = await Promise.all([
-        fetchImage1(registrationNumber, hospitalId, selectedDoctorId || null),
-        fetchImage2(registrationNumber, hospitalId, selectedDoctorId || null),
-      ]);
+      const imagePromises = [];
+      if (cardSideSelection === CARD_SIDE_OPTION.FRONT || cardSideSelection === CARD_SIDE_OPTION.BOTH) {
+        imagePromises.push(
+          fetchImage1(registrationNumber, hospitalId, selectedDoctorId || null).then((url) => ({
+            side: CARD_SIDE_OPTION.FRONT,
+            url,
+          }))
+        );
+      }
+      if (cardSideSelection === CARD_SIDE_OPTION.BACK || cardSideSelection === CARD_SIDE_OPTION.BOTH) {
+        imagePromises.push(
+          fetchImage2(registrationNumber, hospitalId, selectedDoctorId || null).then((url) => ({
+            side: CARD_SIDE_OPTION.BACK,
+            url,
+          }))
+        );
+      }
 
-      if (fetchedImage1 && fetchedImage2) {
-        // Ensure images are fully loaded before downloading
-        await Promise.all([
-          loadImage(fetchedImage1),
-          loadImage(fetchedImage2),
-        ]);
+      const fetchedImages = await Promise.all(imagePromises);
 
-        // Trigger download for the first image
-        await downloadImage(fetchedImage1, `${registrationNumber}_front_card.jpg`);
+      if (fetchedImages.length > 0) {
+        await Promise.all(fetchedImages.map((image) => loadImage(image.url)));
 
-        // Add a slight delay before downloading the second image
-        setTimeout(async () => {
-          await downloadImage(fetchedImage2, `${registrationNumber}_back_card.jpg`);
-          toast.success("Cards generated successfully!");
-        }, 500); // Delay of 500ms (adjust if necessary)
+        for (const image of fetchedImages) {
+          await downloadImage(image.url, `${registrationNumber}_${image.side}_card.jpg`);
+        }
+
+        await addHistory(registrationNumber);
+        toast.success(`Card ${CARD_SIDE_LABELS[cardSideSelection].toLowerCase()} generated successfully!`);
       } else {
         toast.error("Images are not available for export.");
       }
@@ -314,29 +380,55 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
     const { registrationNumber, hospitalId } = selectedPatient;
 
     try {
-      // Show loader while fetching images
-      toast.info("Generating cards for printing. Please wait...");
+      if (saveCardSidePreference) {
+        localStorage.setItem(CARD_SIDE_PREFERENCE_KEY, cardSideSelection);
+      } else {
+        localStorage.removeItem(CARD_SIDE_PREFERENCE_KEY);
+      }
 
-      // Fetch Image 1 and Image 2 in parallel with optional doctorId
-      const [fetchedImage1, fetchedImage2] = await Promise.all([
-        fetchImage1(registrationNumber, hospitalId, selectedDoctorId || null),
-        fetchImage2(registrationNumber, hospitalId, selectedDoctorId || null),
-      ]);
+      // Show loader while fetching image
+      toast.info("Generating card for printing. Please wait...");
 
-      if (fetchedImage1 && fetchedImage2) {
-        // Ensure images are fully loaded
-        await Promise.all([
-          loadImage(fetchedImage1),
-          loadImage(fetchedImage2),
-        ]);
+      const imagePromises = [];
+      if (cardSideSelection === CARD_SIDE_OPTION.FRONT || cardSideSelection === CARD_SIDE_OPTION.BOTH) {
+        imagePromises.push(
+          fetchImage1(registrationNumber, hospitalId, selectedDoctorId || null).then((url) => ({
+            side: CARD_SIDE_OPTION.FRONT,
+            url,
+          }))
+        );
+      }
+      if (cardSideSelection === CARD_SIDE_OPTION.BACK || cardSideSelection === CARD_SIDE_OPTION.BOTH) {
+        imagePromises.push(
+          fetchImage2(registrationNumber, hospitalId, selectedDoctorId || null).then((url) => ({
+            side: CARD_SIDE_OPTION.BACK,
+            url,
+          }))
+        );
+      }
 
-        // Create a print window with both images
+      const fetchedImages = await Promise.all(imagePromises);
+
+      if (fetchedImages.length > 0) {
+        await Promise.all(fetchedImages.map((image) => loadImage(image.url)));
+
         const printWindow = window.open('', '_blank');
 
         if (!printWindow) {
           toast.error("Pop-up blocked. Please allow pop-ups and try again.");
           return;
         }
+
+        const cardHtml = fetchedImages
+          .map(
+            (image, index) => `
+              <div class="card-container ${index < fetchedImages.length - 1 ? 'with-page-break' : ''}">
+                <h2>${CARD_SIDE_LABELS[image.side]} Card - ${registrationNumber}</h2>
+                <img src="${image.url}" alt="${CARD_SIDE_LABELS[image.side]} Card" />
+              </div>
+            `
+          )
+          .join('');
 
         printWindow.document.write(`
           <!DOCTYPE html>
@@ -350,11 +442,11 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
                     padding: 10px;
                   }
                   .card-container {
-                    page-break-after: always;
+                    page-break-after: avoid;
                     margin-bottom: 20px;
                   }
-                  .card-container:last-child {
-                    page-break-after: avoid;
+                  .with-page-break {
+                    page-break-after: always;
                   }
                   h2 {
                     display: none;
@@ -386,16 +478,8 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
               </style>
             </head>
             <body>
-              <div class="card-container">
-                <h2>Front Card - ${registrationNumber}</h2>
-                <img src="${fetchedImage1}" alt="Front Card" onload="console.log('Image 1 loaded')" />
-              </div>
-              <div class="card-container">
-                <h2>Back Card - ${registrationNumber}</h2>
-                <img src="${fetchedImage2}" alt="Back Card" onload="console.log('Image 2 loaded')" />
-              </div>
+              ${cardHtml}
               <script>
-                // Wait for all images to load before triggering print
                 window.onload = function() {
                   setTimeout(function() {
                     window.print();
@@ -405,12 +489,12 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
             </body>
           </html>
         `);
-
+        
         printWindow.document.close();
-
+        
         toast.success("Print preview opened!");
       } else {
-        toast.error("Images are not available for printing.");
+        toast.error("Selected card image is not available for printing.");
       }
     } catch (error) {
       console.error("Error printing images:", error);
@@ -426,21 +510,6 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
     setIsDoctorModalOpen(false);
     setSelectedPatient(null);
     setSelectedDoctorId('');
-  };
-
-  const handleOpenSmartCardPrinter = () => {
-    if (!selectedPatient) {
-      toast.error("No patient selected for smart card printing.");
-      return;
-    }
-    // Keep doctor modal open but open smart card printer in a new modal
-    setIsSmartCardPrinterOpen(true);
-  };
-
-  const handleCloseSmartCardPrinter = () => {
-    setIsSmartCardPrinterOpen(false);
-    // Optionally close the doctor modal too
-    // handleCloseDoctorModal();
   };
 
   // Helper function to ensure the image is fully loaded
@@ -691,7 +760,7 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
                   >
                     Generate Patient Cards
                   </Typography>
-
+                  
                   {selectedPatient && (
                     <Box sx={{ mb: 3, p: 2, backgroundColor: 'faint.main', borderRadius: 2 }}>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -710,6 +779,36 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
                     error={false}
                     helperText=""
                   />
+
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      Select card side:
+                    </Typography>
+                    <FormGroup row>
+                      <FormControlLabel
+                        control={<Checkbox checked={cardSideSelection === CARD_SIDE_OPTION.FRONT} onChange={() => setCardSideSelection(CARD_SIDE_OPTION.FRONT)} />}
+                        label="Front Side"
+                      />
+                      <FormControlLabel
+                        control={<Checkbox checked={cardSideSelection === CARD_SIDE_OPTION.BACK} onChange={() => setCardSideSelection(CARD_SIDE_OPTION.BACK)} />}
+                        label="Back Side"
+                      />
+                      <FormControlLabel
+                        control={<Checkbox checked={cardSideSelection === CARD_SIDE_OPTION.BOTH} onChange={() => setCardSideSelection(CARD_SIDE_OPTION.BOTH)} />}
+                        label="Both"
+                      />
+                    </FormGroup>
+                    <FormControlLabel
+                      sx={{ mt: 0.5 }}
+                      control={
+                        <Checkbox
+                          checked={saveCardSidePreference}
+                          onChange={(event) => setSaveCardSidePreference(event.target.checked)}
+                        />
+                      }
+                      label="Save this setting for future"
+                    />
+                  </Box>
                 </Box>
 
                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
@@ -747,6 +846,7 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
                   <Button
                     variant="contained"
                     onClick={handleDirectPrint}
+                    disabled={!selectedDoctorId}
                     sx={{
                       borderRadius: 2,
                       textTransform: 'none',
@@ -755,81 +855,14 @@ const DashboardContent = ({ registrationNumber, hospitalId: propHospitalId }) =>
                       '&:hover': {
                         backgroundColor: '#1565c0',
                       },
-                    }}
-                  >
-                    Print Directly
-                  </Button>
-                  <Button
-                    variant="contained"
-                    onClick={handleOpenSmartCardPrinter}
-                    disabled={!selectedDoctorId}
-                    sx={{
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      px: 3,
-                      backgroundColor: '#9c27b0',
-                      '&:hover': {
-                        backgroundColor: '#7b1fa2',
-                      },
                       '&.Mui-disabled': {
                         backgroundColor: 'grey.400',
                         color: 'grey.700',
                       },
                     }}
                   >
-                    Print Smart Card
+                    Print Directly
                   </Button>
-                </Box>
-              </Card>
-            </Modal>
-
-            {/* Smart Card Printer Modal */}
-            <Modal
-              open={isSmartCardPrinterOpen}
-              onClose={handleCloseSmartCardPrinter}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              }}
-            >
-              <Card
-                sx={{
-                  width: { xs: '95%', md: '90%' },
-                  maxWidth: '900px',
-                  maxHeight: '95vh',
-                  borderRadius: '12px',
-                  backgroundColor: '#fff',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
-                  position: 'relative',
-                  overflow: 'auto',
-                }}
-              >
-                <IconButton
-                  onClick={handleCloseSmartCardPrinter}
-                  sx={{
-                    position: 'absolute',
-                    top: 10,
-                    right: 10,
-                    color: '#000',
-                    backgroundColor: '#fff',
-                    zIndex: 1,
-                    '&:hover': {
-                      backgroundColor: '#f5f5f5',
-                    },
-                  }}
-                >
-                  <CloseIcon />
-                </IconButton>
-                <Box sx={{ p: { xs: 2, md: 3 }, mt: 4 }}>
-                  {selectedPatient && (
-                    <SmartCardPrinter
-                      userId={selectedPatient.registrationNumber}
-                      hospitalId={selectedPatient.hospitalId || hospitalId}
-                      doctorId={selectedDoctorId || null}
-                    />
-                  )}
                 </Box>
               </Card>
             </Modal>

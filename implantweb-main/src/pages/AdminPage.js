@@ -32,8 +32,8 @@ function AdminPage() {
   const [previewMode, setPreviewMode] = useState(false);
   const [setAuditTrail] = useState([]);
   const [imageUrls, setImageUrls] = useState([]);
+  const [isOpen] = useState(true);
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')); // Check if the screen is small
-  const [isOpen, setIsOpen] = useState(true);
 
   useEffect(() => {
     if (formChanges.logo.length > 0) {

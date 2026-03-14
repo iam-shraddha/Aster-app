@@ -1,6 +1,5 @@
 import axios from 'axios';
 import BASE_URL from './Config'; // Ensure this contains the base URL for your API
-import { useEffect, useState } from 'react';
 
 // Generic GET request
 export const fetchData = async (endpoint) => {
@@ -357,28 +356,4 @@ export const fetchImage2 = async (registrationNumber, hospitalId, doctorId = nul
       error.response?.data?.message || "Failed to fetch Image 2. Please try again."
     );
   }
-};
-
-// React component: Fetch and display images
-export const useFetchImages = () => {
-  const [image1, setImage1] = useState(null);
-  const [image2, setImage2] = useState(null);
-
-  const fetchImages = async (registrationNumber, hospitalId) => {
-    if (!registrationNumber || !hospitalId) return;
-
-    try {
-      // Fetch Image 1 and Image 2
-      const fetchedImage1 = await fetchImage1(registrationNumber, hospitalId);
-      const fetchedImage2 = await fetchImage2(registrationNumber, hospitalId);
-
-      // Set the fetched images to state
-      setImage1(fetchedImage1);
-      setImage2(fetchedImage2);
-    } catch (error) {
-      console.error('Error fetching images:', error);
-    }
-  };
-
-  return { image1, image2, fetchImages };
 };

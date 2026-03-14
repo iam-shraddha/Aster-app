@@ -29,7 +29,7 @@ function DashboardTracker() {
     const [numberOfPatients, setNumberOfPatients] = useState(0);
     const [numberOfPrints, setNumberOfPrints] = useState(0);
     const [data, setData] = useState([]);
-    const [isOpen, setIsOpen] = useState(true);
+    const [isOpen] = useState(true);
     const theme = useTheme();
 
 
