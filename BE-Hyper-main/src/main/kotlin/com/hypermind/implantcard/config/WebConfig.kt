@@ -11,6 +11,8 @@ class WebConfig : WebMvcConfigurer {
             .allowedOrigins(
                 "http://localhost:3000", // React dev server
                 "http://localhost:8080",
+                "http://3.110.182.172:3000",
+                "http://3.110.182.172:8080",
                 "https://implantweb.vercel.app", //Production frontend,
                 "https://implant.hyperminds.tech"
             )
