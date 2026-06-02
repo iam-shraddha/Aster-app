@@ -14,7 +14,7 @@ class WebConfig : WebMvcConfigurer {
                 "http://3.110.182.172:3000",
                 "http://3.110.182.172:8080",
                 "https://implantweb.vercel.app", //Production frontend,
-                "https://implant.hyperminds.tech"
+                "https://implant.hyperminds.tech",
                 "http://172.24.196.63:3000",
                 "http://172.24.196.63:8080"
             )
