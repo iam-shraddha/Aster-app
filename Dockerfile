@@ -9,8 +9,7 @@ COPY BE-Hyper-main/ ./
 RUN chmod +x ./gradlew
 
 # Build backend JAR
-RUN ./gradlew clean bootJar --no-daemon -x test
-
+RUN ./gradlew clean bootJar --no-daemon -x test --stacktrace --info
 # ----------------------------
 # Stage 2: Build Frontend
 # ----------------------------
